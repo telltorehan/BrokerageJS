@@ -1,0 +1,20 @@
+{
+  "name": "brokeragejs-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright end-to-end tests for the CareCubed Brokerage app",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:submit": "playwright test -g \"end to end\"",
+    "test:safe": "playwright test -g \"without submitting\"",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^8.4.1",
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^20.14.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.5.4"
+  }
+}
