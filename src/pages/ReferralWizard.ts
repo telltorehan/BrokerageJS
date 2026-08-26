@@ -46,11 +46,9 @@ export class ReferralWizard {
     await SearchableDropdown.byLabel(this.page, 'Placement priority').select(data.placementPriority);
     await SearchableDropdown.byLabel(this.page, 'Placement funding').select(data.placementFunding);
 
-    if (data.topUp) {
-      const topUp = SearchableDropdown.byLabel(this.page, 'Top-up');
-      if (await topUp.isPresent()) {
-        await topUp.select(data.topUp);
-      }
+    const topUp = SearchableDropdown.byLabel(this.page, 'Top-up');
+    if (await topUp.isPresent()) {
+      await topUp.select(data.topUp);
     }
 
     await this.page.locator('#Ref_PreferredLocation').fill(data.preferredLocation);
@@ -66,7 +64,9 @@ export class ReferralWizard {
     await this.page.keyboard.press('Escape');
 
     await this.radios.choose(client.gender);
-    await this.radios.choose(client.serviceUserGroup);
+    // this label runs long, match on a stable leading fragment instead
+    // of the full (and slightly variable) wording
+    await this.radios.choose(client.serviceUserGroup, false);
     await this.next();
   }
 
@@ -76,10 +76,13 @@ export class ReferralWizard {
     await this.next();
   }
 
+  // care home details, main care needs, other info, internal notes and
+  // alternative contact all live on one page - there's no "Next" between
+  // them, just the single "Continue to summary" button at the end
+
   async completeCareHomeDetails(data: ReferralData): Promise<void> {
     await this.page.locator('#Ref_Client_CurrentWeeklyCost').fill(data.currentWeeklyCost);
     await this.page.locator('#Ref_Client_MoveReasonComments').fill(data.moveReasonComments);
-    await this.next();
   }
 
   async completeMainCareNeeds(data: ReferralData): Promise<void> {
@@ -88,17 +91,14 @@ export class ReferralWizard {
       await dropdown.select(need.level);
       await this.page.locator(`#Ref_Client_Need_${need.key}_Comment`).fill(need.comment);
     }
-    await this.next();
   }
 
   async completeOtherInfo(text: string): Promise<void> {
     await this.otherInformation.fill(text);
-    await this.next();
   }
 
   async completeInternalNotes(notes: string): Promise<void> {
     await this.page.locator('#Ref_BrokerageTeam').fill(notes.slice(0, 2000));
-    await this.next();
   }
 
   async completeAlternativeContact(contact: AlternativeContact): Promise<void> {
@@ -106,7 +106,6 @@ export class ReferralWizard {
     await this.page.getByPlaceholder('Enter an email address').fill(contact.email);
     await this.page.getByPlaceholder('Enter a tel number in any').fill(contact.phone);
     await this.page.locator('#Ref_Alternative_Additional').fill(contact.additionalInfo);
-    // this step's button reads "Continue to summary", not "Next"
     await this.page.getByText('Continue to summary', { exact: true }).click();
   }
 

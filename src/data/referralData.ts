@@ -40,7 +40,7 @@ export interface ReferralData {
   serviceLevel: string;
   placementPriority: string;
   placementFunding: string;
-  topUp?: string;
+  topUp: string;
   preferredLocation: string;
   client: ClientDetails;
   nhsNumber: string;
@@ -71,6 +71,7 @@ export function buildReferralData(): ReferralData {
     serviceLevel: 'Enhanced Residential',
     placementPriority: 'Long term',
     placementFunding: 'S117',
+    topUp: 'None',
     preferredLocation: faker.location.city(),
     client: {
       title: gender === 'Male' ? 'Mr' : 'Mrs',
@@ -78,7 +79,7 @@ export function buildReferralData(): ReferralData {
       lastName,
       dobDisplay: toUkDate(dob),
       gender,
-      serviceUserGroup: 'Older people',
+      serviceUserGroup: 'Learning Disabilities',
     },
     nhsNumber: faker.string.numeric(10),
     hasLasNumber: 'No',

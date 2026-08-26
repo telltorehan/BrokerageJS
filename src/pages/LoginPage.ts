@@ -10,6 +10,6 @@ export class LoginPage {
   async login(email: string, password: string): Promise<void> {
     await this.page.locator('#Email').fill(email);
     await this.page.locator('#Password').fill(password);
-    await this.page.locator('#Password').press('Enter');
+    await this.page.getByRole('button', { name: 'Login' }).click();
   }
 }

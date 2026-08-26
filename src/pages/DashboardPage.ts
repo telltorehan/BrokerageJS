@@ -5,7 +5,9 @@ export class DashboardPage {
   constructor(private readonly page: Page) {}
 
   get pageIndicator(): Locator {
-    return this.page.getByText('New referral', { exact: true });
+    // the card's accessible text is "New referral Create a new..." as one
+    // run, so an exact match here never resolves
+    return this.page.getByText('New referral');
   }
 
   async open(): Promise<void> {
