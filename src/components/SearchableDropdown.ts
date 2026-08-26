@@ -35,7 +35,11 @@ export class SearchableDropdown {
   async select(optionText: string): Promise<void> {
     await this.toggle.first().scrollIntoViewIfNeeded();
     await this.toggle.first().click();
-    await this.page.getByRole('option', { name: optionText, exact: true }).click();
+    // the underlying native <select> is still in the DOM and its <option>
+    // tags carry role="option" too, so an unscoped getByRole matches both
+    // it and the real widget - the open menu is the only thing exposing a
+    // listbox role, scope to that to keep the match unique
+    await this.page.getByRole('listbox').getByRole('option', { name: optionText, exact: true }).click();
     // the open menu sits on top of whatever field comes next, close it
     // explicitly rather than relying on the click having done that
     await this.page.keyboard.press('Escape');
