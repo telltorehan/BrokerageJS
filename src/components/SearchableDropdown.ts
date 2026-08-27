@@ -43,11 +43,16 @@ export class SearchableDropdown {
     // as either a combobox (single-select) or a listbox (multi-select),
     // so scoping by role alone isn't reliable either way. the real widget
     // always renders its choices as <a role="option">, the native select
-    // always uses actual <option> tags - anchor on the tag instead, and a
-    // short timeout means a typo'd option name fails fast rather than
-    // burning the whole test timeout on a click that can never resolve
+    // always uses actual <option> tags - anchor on the tag instead.
+    // several dropdowns share option text (e.g. "Other - please detail in
+    // comments box below"), and bootstrap-select leaves closed menus in
+    // the DOM rather than removing them, so :visible is needed too - only
+    // the menu we just opened is ever visible, since every prior select()
+    // closed its own menu with Escape before returning. a short timeout
+    // means a typo'd option name fails fast rather than burning the whole
+    // test timeout on a click that can never resolve
     await this.page
-      .locator('a[role="option"]')
+      .locator('a[role="option"]:visible')
       .filter({ hasText: new RegExp(`^${escapeForRegExp(optionText)}$`) })
       .click({ timeout: 5000 });
     // the open menu sits on top of whatever field comes next, close it
