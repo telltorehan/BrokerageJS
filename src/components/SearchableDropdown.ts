@@ -39,7 +39,12 @@ export class SearchableDropdown {
     // tags carry role="option" too, so an unscoped getByRole matches both
     // it and the real widget - the open menu is the only thing exposing a
     // listbox role, scope to that to keep the match unique
-    await this.page.getByRole('listbox').getByRole('option', { name: optionText, exact: true }).click();
+    // a short timeout here means a typo'd option name fails fast instead
+    // of burning the whole test timeout on a click that can never resolve
+    await this.page
+      .getByRole('listbox')
+      .getByRole('option', { name: optionText, exact: true })
+      .click({ timeout: 5000 });
     // the open menu sits on top of whatever field comes next, close it
     // explicitly rather than relying on the click having done that
     await this.page.keyboard.press('Escape');

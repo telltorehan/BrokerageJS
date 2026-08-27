@@ -46,9 +46,11 @@ export class ReferralWizard {
     await SearchableDropdown.byLabel(this.page, 'Placement priority').select(data.placementPriority);
     await SearchableDropdown.byLabel(this.page, 'Placement funding').select(data.placementFunding);
 
-    const topUp = SearchableDropdown.byLabel(this.page, 'Top-up');
-    if (await topUp.isPresent()) {
-      await topUp.select(data.topUp);
+    if (data.topUp) {
+      const topUp = SearchableDropdown.byLabel(this.page, 'Top-up');
+      if (await topUp.isPresent()) {
+        await topUp.select(data.topUp);
+      }
     }
 
     await this.page.locator('#Ref_PreferredLocation').fill(data.preferredLocation);

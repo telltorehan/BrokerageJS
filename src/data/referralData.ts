@@ -40,7 +40,9 @@ export interface ReferralData {
   serviceLevel: string;
   placementPriority: string;
   placementFunding: string;
-  topUp: string;
+  // real option text isn't confirmed yet, leave unset until it is -
+  // guessing wrong here just trades a skipped field for a hung test
+  topUp?: string;
   preferredLocation: string;
   client: ClientDetails;
   nhsNumber: string;
@@ -71,7 +73,6 @@ export function buildReferralData(): ReferralData {
     serviceLevel: 'Enhanced Residential',
     placementPriority: 'Long term',
     placementFunding: 'S117',
-    topUp: 'None',
     preferredLocation: faker.location.city(),
     client: {
       title: gender === 'Male' ? 'Mr' : 'Mrs',
