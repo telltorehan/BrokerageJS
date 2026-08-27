@@ -78,13 +78,10 @@ export class ReferralWizard {
     await this.next();
   }
 
-  // care home details, main care needs, other info, internal notes and
-  // alternative contact all live on one page - there's no "Next" between
-  // them, just the single "Continue to summary" button at the end
-
   async completeCareHomeDetails(data: ReferralData): Promise<void> {
     await this.page.locator('#Ref_Client_CurrentWeeklyCost').fill(data.currentWeeklyCost);
     await this.page.locator('#Ref_Client_MoveReasonComments').fill(data.moveReasonComments);
+    await this.next();
   }
 
   async completeMainCareNeeds(data: ReferralData): Promise<void> {
@@ -93,14 +90,17 @@ export class ReferralWizard {
       await dropdown.select(need.level);
       await this.page.locator(`#Ref_Client_Need_${need.key}_Comment`).fill(need.comment);
     }
+    await this.next();
   }
 
   async completeOtherInfo(text: string): Promise<void> {
     await this.otherInformation.fill(text);
+    await this.next();
   }
 
   async completeInternalNotes(notes: string): Promise<void> {
     await this.page.locator('#Ref_BrokerageTeam').fill(notes.slice(0, 2000));
+    await this.next();
   }
 
   async completeAlternativeContact(contact: AlternativeContact): Promise<void> {
