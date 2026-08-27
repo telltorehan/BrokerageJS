@@ -8,7 +8,9 @@ export class RichTextEditor {
   }
 
   async fill(text: string): Promise<void> {
-    const body = this.frame.getByRole('textbox', { name: 'Rich Text Area' });
+    // the editable body is a plain contenteditable div with an aria-label,
+    // not something exposing role="textbox" - match on the label directly
+    const body = this.frame.getByLabel('Rich Text Area');
     await body.click();
     await body.fill(text);
   }
