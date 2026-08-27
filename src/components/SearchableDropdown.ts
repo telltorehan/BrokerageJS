@@ -1,5 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 
+function escapeForRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Driver for the bootstrap-select widgets used throughout the wizard.
  * Option ids (#bs-select-9-3 etc) shift depending on how many items are in
@@ -35,15 +39,16 @@ export class SearchableDropdown {
   async select(optionText: string): Promise<void> {
     await this.toggle.first().scrollIntoViewIfNeeded();
     await this.toggle.first().click();
-    // the underlying native <select> is still in the DOM and its <option>
-    // tags carry role="option" too, so an unscoped getByRole matches both
-    // it and the real widget - the open menu is the only thing exposing a
-    // listbox role, scope to that to keep the match unique
-    // a short timeout here means a typo'd option name fails fast instead
-    // of burning the whole test timeout on a click that can never resolve
+    // the native <select> underneath is exposed in the accessibility tree
+    // as either a combobox (single-select) or a listbox (multi-select),
+    // so scoping by role alone isn't reliable either way. the real widget
+    // always renders its choices as <a role="option">, the native select
+    // always uses actual <option> tags - anchor on the tag instead, and a
+    // short timeout means a typo'd option name fails fast rather than
+    // burning the whole test timeout on a click that can never resolve
     await this.page
-      .getByRole('listbox')
-      .getByRole('option', { name: optionText, exact: true })
+      .locator('a[role="option"]')
+      .filter({ hasText: new RegExp(`^${escapeForRegExp(optionText)}$`) })
       .click({ timeout: 5000 });
     // the open menu sits on top of whatever field comes next, close it
     // explicitly rather than relying on the click having done that
