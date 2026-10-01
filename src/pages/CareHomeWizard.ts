@@ -106,6 +106,7 @@ export class CareHomeWizard {
     await this.page.locator('#Town_CHA').fill(client.town);
     await this.page.locator('#County').fill(client.county);
     await this.page.locator('#Ref_Client_Postcode').fill(client.postcode);
+    await this.next();
   }
 
   async completeMainCareNeeds(data: CareHomeData): Promise<void> {
