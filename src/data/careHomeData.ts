@@ -20,17 +20,18 @@ export interface CareHomeCareNeed {
 }
 
 export interface CareHomeData {
-  // these four are confirmed option lists, not guesses
+  // confirmed against the real app (service level from a failure
+  // snapshot, the rest directly from the recording's accessible names)
   serviceLevel: string;
   gender: 'Male' | 'Female';
-  // the rest of this group are unconfirmed - real option text wasn't
-  // available from the recording, see src/pages/CareHomeWizard.ts
+  daysNeeded: string[];
+  equipment: string[];
+  // still unconfirmed - real option text wasn't visible anywhere in the
+  // recording, see SearchableDropdown usage in CareHomeWizard.ts
   referralReason: string;
   hospitalTeam: string;
   startDateDisplay: string;
-  daysNeeded: string[];
   durationRequired: string;
-  equipment: string[];
   nhsNumber: string;
   hasLasNumber: 'Yes' | 'No';
   lasNumber: string;
@@ -59,7 +60,7 @@ export function buildCareHomeData(): CareHomeData {
   const startDate = faker.date.soon({ days: 14 });
 
   return {
-    serviceLevel: 'Standard',
+    serviceLevel: 'One Care Worker Only',
     referralReason: 'Hospital discharge',
     hospitalTeam: 'Not applicable',
     startDateDisplay: toUkDate(startDate),
