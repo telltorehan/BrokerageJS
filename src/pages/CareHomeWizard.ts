@@ -75,8 +75,8 @@ export class CareHomeWizard {
   }
 
   async completeHospitalDetails(data: CareHomeData): Promise<void> {
-    await this.radios.choose(data.isInpatient);
-    if (data.isInpatient === 'Yes') {
+    await this.radios.chooseWithinGroup('Is this a hospital discharge?', data.isHospitalDischarge);
+    if (data.isHospitalDischarge === 'Yes') {
       await SearchableDropdown.byLabel(this.page, 'Hospital').select(data.hospitalTeam);
       await this.page.locator('#Ward_Name').fill(data.wardName);
       await this.page.locator('#Ward_TelNumber').fill(data.wardTelephone);

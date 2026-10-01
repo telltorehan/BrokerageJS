@@ -36,7 +36,7 @@ export interface CareHomeData {
   nhsNumber: string;
   hasLasNumber: 'Yes' | 'No';
   lasNumber: string;
-  isInpatient: 'Yes' | 'No';
+  isHospitalDischarge: 'Yes' | 'No';
   wardName: string;
   wardTelephone: string;
   client: CareHomeClientDetails;
@@ -75,7 +75,7 @@ export function buildCareHomeData(): CareHomeData {
     // there's no evidence either way yet
     hasLasNumber: 'Yes',
     lasNumber: faker.string.numeric(12),
-    isInpatient: 'Yes',
+    isHospitalDischarge: 'Yes',
     wardName: faker.lorem.words(2),
     wardTelephone: faker.string.numeric(11),
     client: {
