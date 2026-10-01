@@ -84,9 +84,10 @@ export class CareHomeWizard {
     await this.next();
   }
 
-  // client details, address, care needs, rich text fields and alternative
-  // contact all live on one page - the recording never showed a "Next"
-  // click anywhere in this block, only the final button below
+  // unlike the assumption this comment used to make, Client's Personal
+  // Details is its own step - the address fields only become visible on
+  // the next step after clicking "Next" here, confirmed by three separate
+  // runs where only this step's own fields ever appeared on screen
 
   async completeClientDetails(client: CareHomeClientDetails): Promise<void> {
     await SearchableDropdown.byLabel(this.page, 'Title').select(client.title);
@@ -96,6 +97,10 @@ export class CareHomeWizard {
     await this.page.keyboard.press('Escape');
     await this.radios.chooseWithinGroup('Client Gender', client.gender);
     await SearchableDropdown.byLabel(this.page, 'Service User Group').select(client.serviceUserGroup);
+    await this.next();
+  }
+
+  async completeAddress(client: CareHomeClientDetails): Promise<void> {
     await this.page.locator('#Address_Line1').fill(client.addressLine1);
     await this.page.locator('#Address_Line2').fill(client.addressLine2);
     await this.page.locator('#Town_CHA').fill(client.town);

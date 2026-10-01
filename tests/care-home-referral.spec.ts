@@ -30,6 +30,7 @@ async function fillWizardThroughSummary(wizard: CareHomeWizard, data: CareHomeDa
   await wizard.completeNhsAndLas(data);
   await wizard.completeHospitalDetails(data);
   await wizard.completeClientDetails(data.client);
+  await wizard.completeAddress(data.client);
   await wizard.completeMainCareNeeds(data);
   await wizard.completeAdditionalInfo(data);
   await wizard.completeAlternativeContact(data.alternativeContact);
