@@ -75,7 +75,10 @@ export function buildCareHomeData(): CareHomeData {
     lasNumber: faker.string.numeric(12),
     isHospitalDischarge: 'Yes',
     wardName: faker.lorem.words(2),
-    wardTelephone: faker.string.numeric(11),
+    // a plain random digit string fails this field's UK phone format check
+    // (leading zero required), which was marking the whole Hospital
+    // Discharge step incomplete and blocking later sections from appearing
+    wardTelephone: `07${faker.string.numeric(9)}`,
     client: {
       title: gender === 'Male' ? 'Mr' : 'Mrs',
       firstName,
