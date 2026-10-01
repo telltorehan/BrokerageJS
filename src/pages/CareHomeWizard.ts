@@ -111,12 +111,21 @@ export class CareHomeWizard {
 
   async completeMainCareNeeds(data: CareHomeData): Promise<void> {
     // same field data-ids and option sets as Residential - the comment
-    // box for each need stays hidden until a dropdown option is chosen,
-    // which is why filling the comment alone used to hang
+    // box for each need stays hidden until a dropdown option is chosen.
+    // unlike Residential, not every need here has a comment box at all
+    // (Clothing never shows one, regardless of the option picked), so
+    // only fill it if it actually appears rather than assuming it exists
     for (const need of data.careNeeds) {
       const dropdown = SearchableDropdown.byDataId(this.page, `Ref_Client_Need_${need.key}`);
       await dropdown.select(need.level);
-      await this.page.locator(`#Ref_Client_Need_${need.key}_Comment`).fill(need.comment);
+      const comment = this.page.locator(`#Ref_Client_Need_${need.key}_Comment`);
+      const hasComment = await comment
+        .waitFor({ state: 'visible', timeout: 2000 })
+        .then(() => true)
+        .catch(() => false);
+      if (hasComment) {
+        await comment.fill(need.comment);
+      }
     }
     await this.next();
   }
