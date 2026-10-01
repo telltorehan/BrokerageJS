@@ -65,7 +65,7 @@ export class CareHomeWizard {
 
   async completeNhsAndLas(data: CareHomeData): Promise<void> {
     await this.page.locator('#Ref_Client_NHSNumber').fill(data.nhsNumber);
-    await this.radios.choose(data.hasLasNumber);
+    await this.radios.chooseWithinGroup('Does the client have an LAS number?', data.hasLasNumber);
     if (data.hasLasNumber === 'Yes') {
       await this.page.locator('#Ref_Client_LASNumber').fill(data.lasNumber);
       await this.page.locator('#LAS_Restricted_1').check();
