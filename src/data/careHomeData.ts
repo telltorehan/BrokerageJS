@@ -20,18 +20,19 @@ export interface CareHomeCareNeed {
 }
 
 export interface CareHomeData {
-  // confirmed against the real app (service level from a failure
-  // snapshot, the rest directly from the recording's accessible names)
+  // fixed option lists, confirmed against the real app
   serviceLevel: string;
+  referralReason: string;
   gender: 'Male' | 'Female';
   daysNeeded: string[];
   equipment: string[];
-  // still unconfirmed - real option text wasn't visible anywhere in the
-  // recording, see SearchableDropdown usage in CareHomeWizard.ts
-  referralReason: string;
-  hospitalTeam: string;
+  // free text - any reasonable value works, no fixed option list to match
   startDateDisplay: string;
   durationRequired: string;
+  // still unconfirmed - this dropdown's real option text wasn't visible
+  // anywhere in the recording, see SearchableDropdown usage in
+  // CareHomeWizard.ts
+  hospitalTeam: string;
   nhsNumber: string;
   hasLasNumber: 'Yes' | 'No';
   lasNumber: string;
@@ -61,7 +62,7 @@ export function buildCareHomeData(): CareHomeData {
 
   return {
     serviceLevel: 'One Care Worker Only',
-    referralReason: 'Hospital discharge',
+    referralReason: 'New Referral',
     hospitalTeam: 'Not applicable',
     startDateDisplay: toUkDate(startDate),
     daysNeeded: ['Monday', 'Wednesday', 'Friday'],
