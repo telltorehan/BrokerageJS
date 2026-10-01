@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { AlternativeContact, CARE_NEED_KEYS, CareNeedKey } from './referralData';
+import { AlternativeContact, CARE_NEED_KEYS, CARE_NEED_OPTIONS, CareNeedKey } from './referralData';
 
 export interface CareHomeClientDetails {
   title: string;
@@ -17,6 +17,7 @@ export interface CareHomeClientDetails {
 
 export interface CareHomeCareNeed {
   key: CareNeedKey;
+  level: string;
   comment: string;
 }
 
@@ -94,6 +95,7 @@ export function buildCareHomeData(): CareHomeData {
     },
     careNeeds: CARE_NEED_KEYS.map((key) => ({
       key,
+      level: faker.helpers.arrayElement(CARE_NEED_OPTIONS[key]),
       comment: faker.lorem.sentence(),
     })),
     additionalMedicalHistory: faker.lorem.sentence(),

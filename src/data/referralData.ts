@@ -55,8 +55,9 @@ export interface ReferralData {
   alternativeContact: AlternativeContact;
 }
 
-// each need has its own distinct option set, not a shared severity scale
-const CARE_NEED_OPTIONS: Record<CareNeedKey, string[]> = {
+// each need has its own distinct option set, not a shared severity scale -
+// shared with Care Home, which uses the same field options verbatim
+export const CARE_NEED_OPTIONS: Record<CareNeedKey, string[]> = {
   Behavioural: [
     'No evidence of challenging behaviour',
     'Disinhibition - inappropriate or unwanted behaviour',

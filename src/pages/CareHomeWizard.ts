@@ -110,13 +110,15 @@ export class CareHomeWizard {
   }
 
   async completeMainCareNeeds(data: CareHomeData): Promise<void> {
-    // dropdown toggles for these nine needs weren't exercised in the
-    // recording, so only the comment fields are filled for now - same
-    // option-set research this project already did for Residential will
-    // need repeating here before the dropdowns themselves can be driven
+    // same field data-ids and option sets as Residential - the comment
+    // box for each need stays hidden until a dropdown option is chosen,
+    // which is why filling the comment alone used to hang
     for (const need of data.careNeeds) {
+      const dropdown = SearchableDropdown.byDataId(this.page, `Ref_Client_Need_${need.key}`);
+      await dropdown.select(need.level);
       await this.page.locator(`#Ref_Client_Need_${need.key}_Comment`).fill(need.comment);
     }
+    await this.next();
   }
 
   async completeAdditionalInfo(data: CareHomeData): Promise<void> {
