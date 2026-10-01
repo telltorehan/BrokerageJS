@@ -29,9 +29,6 @@ export interface CareHomeData {
   // free text - any reasonable value works, no fixed option list to match
   startDateDisplay: string;
   durationRequired: string;
-  // still unconfirmed - this dropdown's real option text wasn't visible
-  // anywhere in the recording, see SearchableDropdown usage in
-  // CareHomeWizard.ts
   hospitalTeam: string;
   nhsNumber: string;
   hasLasNumber: 'Yes' | 'No';
@@ -63,7 +60,7 @@ export function buildCareHomeData(): CareHomeData {
   return {
     serviceLevel: 'One Care Worker Only',
     referralReason: 'New Referral',
-    hospitalTeam: 'Not applicable',
+    hospitalTeam: 'Croydon Hospital',
     startDateDisplay: toUkDate(startDate),
     daysNeeded: ['Monday', 'Wednesday', 'Friday'],
     durationRequired: '1 hour',
