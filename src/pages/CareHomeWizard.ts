@@ -94,6 +94,8 @@ export class CareHomeWizard {
     await this.page.locator('#Ref_Client_LastName').fill(client.lastName);
     await this.page.locator('#Ref_Client_DOB').fill(client.dobDisplay);
     await this.page.keyboard.press('Escape');
+    await this.radios.chooseWithinGroup('Client Gender', client.gender);
+    await SearchableDropdown.byLabel(this.page, 'Service User Group').select(client.serviceUserGroup);
     await this.page.locator('#Address_Line1').fill(client.addressLine1);
     await this.page.locator('#Address_Line2').fill(client.addressLine2);
     await this.page.locator('#Town_CHA').fill(client.town);

@@ -7,6 +7,7 @@ export interface CareHomeClientDetails {
   lastName: string;
   dobDisplay: string;
   gender: 'Male' | 'Female';
+  serviceUserGroup: string;
   addressLine1: string;
   addressLine2: string;
   town: string;
@@ -81,6 +82,7 @@ export function buildCareHomeData(): CareHomeData {
       lastName,
       dobDisplay: toUkDate(dob),
       gender,
+      serviceUserGroup: 'Older People',
       addressLine1: faker.location.buildingNumber(),
       addressLine2: faker.location.street(),
       town: faker.location.city(),
