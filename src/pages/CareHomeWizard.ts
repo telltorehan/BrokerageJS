@@ -58,7 +58,7 @@ export class CareHomeWizard {
     await this.page.getByRole('textbox', { name: '/00/0000' }).fill(data.startDateDisplay);
     await this.checkboxes.checkAll(data.daysNeeded);
     await this.page.locator('#Duration_Req').fill(data.durationRequired);
-    await this.radios.choose(data.gender);
+    await this.radios.chooseWithinGroup('Preferred Gender of Care Worker', data.gender);
     await this.checkboxes.checkAll(data.equipment);
     await this.next();
   }
