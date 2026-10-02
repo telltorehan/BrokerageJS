@@ -14,9 +14,12 @@ export class SearchableDropdown {
 
   static byLabel(page: Page, label: string): SearchableDropdown {
     // label and toggle live in the same form-group, there's nothing to
-    // associate them with directly (no for/id, no aria-labelledby)
+    // associate them with directly (no for/id, no aria-labelledby).
+    // some forms keep every step's fields mounted at once, so the same
+    // label (e.g. "Select the hospital team") can exist more than once -
+    // only the currently visible group is ever the one we want
     const field = page
-      .locator('.form-group')
+      .locator('.form-group:visible')
       .filter({ has: page.locator('label', { hasText: label }) })
       .first();
 

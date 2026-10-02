@@ -156,6 +156,12 @@ export class CareHomeWizard {
       'Which type of team is making the referral?',
       data.referralTeamType,
     );
+    // choosing "Hospital team" reveals its own "Select the hospital team"
+    // dropdown here, separate from the one on the earlier Hospital
+    // Discharge step - skipping it blocks Next with a validation popup
+    if (data.referralTeamType === 'Hospital team') {
+      await SearchableDropdown.byLabel(this.page, 'Select the hospital team').select(data.hospitalTeam);
+    }
     await this.next();
   }
 
