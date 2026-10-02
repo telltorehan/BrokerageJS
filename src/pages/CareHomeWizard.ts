@@ -151,6 +151,14 @@ export class CareHomeWizard {
     await this.next();
   }
 
+  async completeReferralTeam(data: CareHomeData): Promise<void> {
+    await this.radios.chooseWithinGroup(
+      'Which type of team is making the referral?',
+      data.referralTeamType,
+    );
+    await this.next();
+  }
+
   async completeAlternativeContact(contact: AlternativeContact): Promise<void> {
     await this.page.locator('#alernative_name').fill(contact.name);
     await this.page.locator('#alternative_contact_no').fill(contact.phone);

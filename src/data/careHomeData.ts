@@ -39,6 +39,7 @@ export interface CareHomeData {
   wardName: string;
   wardTelephone: string;
   medicalDiagnosis: string;
+  referralTeamType: 'Hospital team' | 'Locality team';
   client: CareHomeClientDetails;
   careNeeds: CareHomeCareNeed[];
   additionalMedicalHistory: string;
@@ -82,6 +83,9 @@ export function buildCareHomeData(): CareHomeData {
     // Discharge step incomplete and blocking later sections from appearing
     wardTelephone: `07${faker.string.numeric(9)}`,
     medicalDiagnosis: 'Learning Disability',
+    // the referral already carries hospital discharge details, so
+    // "Hospital team" is the coherent choice for this referral
+    referralTeamType: 'Hospital team',
     client: {
       title: gender === 'Male' ? 'Mr' : 'Mrs',
       firstName,
