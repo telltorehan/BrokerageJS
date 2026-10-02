@@ -130,10 +130,25 @@ export class CareHomeWizard {
     await this.next();
   }
 
-  async completeAdditionalInfo(data: CareHomeData): Promise<void> {
+  // Medical history, Other Information and Internal Notes are each their
+  // own step, same pattern as every other section on this form - the
+  // original assumption that they shared one page was never confirmed
+  // and turned out wrong, same as the earlier client details/address split
+
+  async completeMedicalHistory(data: CareHomeData): Promise<void> {
+    await SearchableDropdown.byLabel(this.page, 'Medical diagnosis').select(data.medicalDiagnosis);
     await this.additionalMedicalHistory.fill(data.additionalMedicalHistory);
-    await this.otherInformation.fill(data.otherInformation);
-    await this.internalNotes.fill(data.internalNotes);
+    await this.next();
+  }
+
+  async completeOtherInfo(text: string): Promise<void> {
+    await this.otherInformation.fill(text);
+    await this.next();
+  }
+
+  async completeInternalNotes(notes: string): Promise<void> {
+    await this.internalNotes.fill(notes);
+    await this.next();
   }
 
   async completeAlternativeContact(contact: AlternativeContact): Promise<void> {

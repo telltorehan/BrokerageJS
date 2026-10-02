@@ -38,6 +38,7 @@ export interface CareHomeData {
   isHospitalDischarge: 'Yes' | 'No';
   wardName: string;
   wardTelephone: string;
+  medicalDiagnosis: string;
   client: CareHomeClientDetails;
   careNeeds: CareHomeCareNeed[];
   additionalMedicalHistory: string;
@@ -80,6 +81,7 @@ export function buildCareHomeData(): CareHomeData {
     // (leading zero required), which was marking the whole Hospital
     // Discharge step incomplete and blocking later sections from appearing
     wardTelephone: `07${faker.string.numeric(9)}`,
+    medicalDiagnosis: 'Learning Disability',
     client: {
       title: gender === 'Male' ? 'Mr' : 'Mrs',
       firstName,
