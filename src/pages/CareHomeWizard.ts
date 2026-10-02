@@ -28,7 +28,8 @@ export class CareHomeWizard {
   }
 
   get submitButton(): Locator {
-    return this.page.getByText('Submit referral', { exact: true });
+    // unlike Residential, this form's summary button just says "Submit"
+    return this.page.getByText('Submit', { exact: true });
   }
 
   get returnToDashboardLink(): Locator {
