@@ -48,6 +48,7 @@ export interface ReferralData {
   nhsNumber: string;
   hasLasNumber: string;
   lasNumber: string;
+  riskDescription: string;
   currentWeeklyCost: string;
   moveReasonComments: string;
   careNeeds: CareNeed[];
@@ -177,6 +178,7 @@ export function buildReferralData(overrides: Partial<ReferralData> = {}): Referr
     nhsNumber: faker.string.numeric(10),
     hasLasNumber: 'No',
     lasNumber: faker.string.numeric(12),
+    riskDescription: faker.lorem.sentence(),
     currentWeeklyCost: faker.number.int({ min: 500, max: 1500 }).toString(),
     moveReasonComments: faker.lorem.sentence(),
     careNeeds: CARE_NEED_KEYS.map((key) => ({

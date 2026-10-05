@@ -83,6 +83,9 @@ export class ReferralWizard {
       await this.page.locator('#Ref_Client_LASNumber').fill(data.lasNumber);
       await this.radios.chooseWithinGroup('Is this a restricted record in LAS?', 'Yes');
       await this.radios.chooseWithinGroup('Are there any risks noted for the client in LAS?', 'Yes');
+      // answering "Yes" to risks reveals this field - no id was visible in
+      // the DOM snapshot, so match on its confirmed label text instead
+      await this.page.getByLabel('Description of the risks').fill(data.riskDescription);
     }
     await this.next();
   }
