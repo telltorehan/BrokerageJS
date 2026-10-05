@@ -69,3 +69,14 @@ test('fills the residential referral wizard without submitting', async ({ page }
   await expect(wizard.summaryHeading).toBeVisible();
   await expect(wizard.submitButton).toBeVisible();
 });
+
+// branch coverage: every other test answers 'No' to this question, so
+// the fields it reveals on 'Yes' have never actually been exercised
+test('fills the residential referral wizard with an LAS number', async ({ page }) => {
+  const data = buildReferralData({ hasLasNumber: 'Yes' });
+  const wizard = await openResidentialWizard(page);
+  await fillWizardThroughSummary(wizard, data);
+
+  await expect(wizard.summaryHeading).toBeVisible();
+  await expect(wizard.submitButton).toBeVisible();
+});

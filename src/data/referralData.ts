@@ -47,6 +47,7 @@ export interface ReferralData {
   client: ClientDetails;
   nhsNumber: string;
   hasLasNumber: string;
+  lasNumber: string;
   currentWeeklyCost: string;
   moveReasonComments: string;
   careNeeds: CareNeed[];
@@ -154,7 +155,7 @@ function toUkDate(date: Date): string {
   return `${day}/${month}/${date.getFullYear()}`;
 }
 
-export function buildReferralData(): ReferralData {
+export function buildReferralData(overrides: Partial<ReferralData> = {}): ReferralData {
   const gender: 'Male' | 'Female' = faker.person.sexType() === 'male' ? 'Male' : 'Female';
   const firstName = faker.person.firstName(gender === 'Male' ? 'male' : 'female');
   const lastName = faker.person.lastName();
@@ -175,6 +176,7 @@ export function buildReferralData(): ReferralData {
     },
     nhsNumber: faker.string.numeric(10),
     hasLasNumber: 'No',
+    lasNumber: faker.string.numeric(12),
     currentWeeklyCost: faker.number.int({ min: 500, max: 1500 }).toString(),
     moveReasonComments: faker.lorem.sentence(),
     careNeeds: CARE_NEED_KEYS.map((key) => ({
@@ -190,5 +192,6 @@ export function buildReferralData(): ReferralData {
       phone: faker.phone.number(),
       additionalInfo: faker.lorem.sentence(),
     },
+    ...overrides,
   };
 }

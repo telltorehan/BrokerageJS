@@ -75,6 +75,14 @@ export class ReferralWizard {
   async completeNhsAndLas(data: ReferralData): Promise<void> {
     await this.page.locator('#Ref_Client_NHSNumber').fill(data.nhsNumber);
     await SearchableDropdown.byLabel(this.page, 'Does the client have an LAS number?').select(data.hasLasNumber);
+    // always 'No' until now, so this branch is unconfirmed - same field
+    // ids as Care Home's identical question, which may or may not hold
+    // here since Care Home used a radio for this question, not a dropdown
+    if (data.hasLasNumber === 'Yes') {
+      await this.page.locator('#Ref_Client_LASNumber').fill(data.lasNumber);
+      await this.page.locator('#LAS_Restricted_1').check();
+      await this.page.locator('#LAS_Risks_1').check();
+    }
     await this.next();
   }
 
