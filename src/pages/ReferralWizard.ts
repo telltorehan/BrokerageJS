@@ -75,13 +75,14 @@ export class ReferralWizard {
   async completeNhsAndLas(data: ReferralData): Promise<void> {
     await this.page.locator('#Ref_Client_NHSNumber').fill(data.nhsNumber);
     await SearchableDropdown.byLabel(this.page, 'Does the client have an LAS number?').select(data.hasLasNumber);
-    // always 'No' until now, so this branch is unconfirmed - same field
-    // ids as Care Home's identical question, which may or may not hold
-    // here since Care Home used a radio for this question, not a dropdown
     if (data.hasLasNumber === 'Yes') {
+      // unlike Care Home, these are Yes/No radio groups rather than plain
+      // checkboxes, and both groups share "Yes"/"No" option text on the
+      // same visible page - scope each to its own question to avoid a
+      // strict-mode collision
       await this.page.locator('#Ref_Client_LASNumber').fill(data.lasNumber);
-      await this.page.locator('#LAS_Restricted_1').check();
-      await this.page.locator('#LAS_Risks_1').check();
+      await this.radios.chooseWithinGroup('Is this a restricted record in LAS?', 'Yes');
+      await this.radios.chooseWithinGroup('Are there any risks noted for the client in LAS?', 'Yes');
     }
     await this.next();
   }
