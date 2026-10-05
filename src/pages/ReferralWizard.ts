@@ -83,9 +83,16 @@ export class ReferralWizard {
       await this.page.locator('#Ref_Client_LASNumber').fill(data.lasNumber);
       await this.radios.chooseWithinGroup('Is this a restricted record in LAS?', 'Yes');
       await this.radios.chooseWithinGroup('Are there any risks noted for the client in LAS?', 'Yes');
-      // answering "Yes" to risks reveals this field - no id was visible in
-      // the DOM snapshot, so match on its confirmed label text instead
-      await this.page.getByLabel('Description of the risks').fill(data.riskDescription);
+      // answering "Yes" to risks reveals this field. the label isn't
+      // programmatically associated with its textarea (no for/id, no
+      // aria-labelledby), so getByLabel can't find it - scope by the
+      // containing form-group instead, same pattern SearchableDropdown
+      // and RadioGroup.chooseWithinGroup already use for this app
+      await this.page
+        .locator('.form-group')
+        .filter({ has: this.page.locator('label', { hasText: 'Description of the risks' }) })
+        .locator('textarea')
+        .fill(data.riskDescription);
     }
     await this.next();
   }
