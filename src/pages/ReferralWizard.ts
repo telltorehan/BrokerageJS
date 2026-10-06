@@ -1,19 +1,19 @@
-import { Locator, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { RadioGroup } from '../components/RadioGroup';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { SearchableDropdown } from '../components/SearchableDropdown';
-import { ValidationDialog } from '../components/ValidationDialog';
+import { WizardNavigation } from '../components/WizardNavigation';
 import { AlternativeContact, ClientDetails, ReferralData } from '../data/referralData';
 
 export class ReferralWizard {
   private readonly radios: RadioGroup;
   private readonly otherInformation: RichTextEditor;
-  private readonly validation: ValidationDialog;
+  private readonly navigation: WizardNavigation;
 
   constructor(private readonly page: Page) {
     this.radios = new RadioGroup(page);
     this.otherInformation = new RichTextEditor(page, '#Ref_Client_OtherInformation_ifr');
-    this.validation = new ValidationDialog(page);
+    this.navigation = new WizardNavigation(page);
   }
 
   get summaryHeading(): Locator {
@@ -33,7 +33,7 @@ export class ReferralWizard {
   }
 
   private async next(): Promise<void> {
-    await this.page.getByText('Next', { exact: true }).click();
+    await this.navigation.next();
   }
 
   async completeIntro(): Promise<void> {
@@ -89,9 +89,9 @@ export class ReferralWizard {
 
       // negative check: this field becomes mandatory once risks = Yes.
       // confirm the app actually enforces that - not just that we fill it -
-      // by trying to move on while it's still blank first
-      await this.next();
-      await this.validation.expectMissingField('Description of the risks');
+      // by trying to move on while it's still blank first. next() now
+      // throws naming every missing field whenever the app blocks it
+      await expect(this.next()).rejects.toThrow('Description of the risks');
 
       // the label isn't programmatically associated with its textarea (no
       // for/id, no aria-labelledby), so getByLabel can't find it - scope by
