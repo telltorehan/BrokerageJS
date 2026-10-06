@@ -35,11 +35,14 @@ export interface CareHomeData {
   nhsNumber: string;
   hasLasNumber: 'Yes' | 'No';
   lasNumber: string;
+  lasNoReason: string;
   isHospitalDischarge: 'Yes' | 'No';
   wardName: string;
   wardTelephone: string;
   medicalDiagnosis: string;
   referralTeamType: 'Hospital team' | 'Locality team';
+  locality: string;
+  localityTeam: string;
   client: CareHomeClientDetails;
   careNeeds: CareHomeCareNeed[];
   additionalMedicalHistory: string;
@@ -71,11 +74,11 @@ export function buildCareHomeData(overrides: Partial<CareHomeData> = {}): CareHo
     gender,
     equipment: ['Mobility aids', 'Wheelchair user'],
     nhsNumber: faker.string.numeric(10),
-    // "Yes" is the only branch the recording actually exercised for both
-    // of these - "No" might hide the fields below differently, and
-    // there's no evidence either way yet
     hasLasNumber: 'Yes',
     lasNumber: faker.string.numeric(12),
+    // only used when hasLasNumber is overridden to 'No' - confirmed real
+    // required field once that branch was actually tested
+    lasNoReason: faker.lorem.sentence(),
     isHospitalDischarge: 'Yes',
     wardName: faker.lorem.words(2),
     // a plain random digit string fails this field's UK phone format check
@@ -86,6 +89,10 @@ export function buildCareHomeData(overrides: Partial<CareHomeData> = {}): CareHo
     // the referral already carries hospital discharge details, so
     // "Hospital team" is the coherent choice for this referral
     referralTeamType: 'Hospital team',
+    // only used when referralTeamType is overridden to 'Locality team' -
+    // confirmed real options once that branch was actually tested
+    locality: 'West Surrey',
+    localityTeam: 'Guildford Locality Team',
     client: {
       title: gender === 'Male' ? 'Mr' : 'Mrs',
       firstName,

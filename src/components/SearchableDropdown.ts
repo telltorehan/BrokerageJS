@@ -17,10 +17,15 @@ export class SearchableDropdown {
     // associate them with directly (no for/id, no aria-labelledby).
     // some forms keep every step's fields mounted at once, so the same
     // label (e.g. "Select the hospital team") can exist more than once -
-    // only the currently visible group is ever the one we want
+    // only the currently visible group is ever the one we want. a
+    // dropdown's field label can also collide with unrelated radio option
+    // text on the same page (e.g. a "Locality team" dropdown next to a
+    // "Locality team" radio choice), so the matched group must actually
+    // contain a combobox toggle, not just the label text
     const field = page
       .locator('.form-group:visible')
       .filter({ has: page.locator('label', { hasText: label }) })
+      .filter({ has: page.locator('button[role="combobox"]') })
       .first();
 
     return new SearchableDropdown(page, field.locator('button[role="combobox"]'));

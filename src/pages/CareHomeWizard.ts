@@ -74,6 +74,14 @@ export class CareHomeWizard {
       await this.page.locator('#Ref_Client_LASNumber').fill(data.lasNumber);
       await this.page.locator('#LAS_Restricted_1').check();
       await this.page.locator('#LAS_Risks_1').check();
+    } else {
+      // confirmed via the 'No' branch coverage test - no id known, and
+      // the label isn't associated with the field, so scope by form-group
+      await this.page
+        .locator('.form-group')
+        .filter({ has: this.page.locator('label', { hasText: 'Describe why the client does not have an LAS number' }) })
+        .getByRole('textbox')
+        .fill(data.lasNoReason);
     }
     await this.next();
   }
@@ -165,6 +173,14 @@ export class CareHomeWizard {
     // Discharge step - skipping it blocks Next with a validation popup
     if (data.referralTeamType === 'Hospital team') {
       await SearchableDropdown.byLabel(this.page, 'Select the hospital team').select(data.hospitalTeam);
+    } else {
+      // confirmed via the 'Locality team' branch coverage test - this
+      // reveals two required dropdowns of its own. "Locality team" is
+      // also the exact text of the radio option just chosen above, which
+      // is why SearchableDropdown.byLabel now requires the matched group
+      // to actually contain a combobox toggle
+      await SearchableDropdown.byLabel(this.page, 'Select the locality').select(data.locality);
+      await SearchableDropdown.byLabel(this.page, 'Locality team').select(data.localityTeam);
     }
     await this.next();
   }
