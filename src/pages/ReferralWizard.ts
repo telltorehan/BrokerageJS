@@ -2,15 +2,18 @@ import { Locator, Page } from '@playwright/test';
 import { RadioGroup } from '../components/RadioGroup';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { SearchableDropdown } from '../components/SearchableDropdown';
+import { ValidationDialog } from '../components/ValidationDialog';
 import { AlternativeContact, ClientDetails, ReferralData } from '../data/referralData';
 
 export class ReferralWizard {
   private readonly radios: RadioGroup;
   private readonly otherInformation: RichTextEditor;
+  private readonly validation: ValidationDialog;
 
   constructor(private readonly page: Page) {
     this.radios = new RadioGroup(page);
     this.otherInformation = new RichTextEditor(page, '#Ref_Client_OtherInformation_ifr');
+    this.validation = new ValidationDialog(page);
   }
 
   get summaryHeading(): Locator {
@@ -83,10 +86,16 @@ export class ReferralWizard {
       await this.page.locator('#Ref_Client_LASNumber').fill(data.lasNumber);
       await this.radios.chooseWithinGroup('Is this a restricted record in LAS?', 'Yes');
       await this.radios.chooseWithinGroup('Are there any risks noted for the client in LAS?', 'Yes');
-      // answering "Yes" to risks reveals this field. the label isn't
-      // programmatically associated with its textarea (no for/id, no
-      // aria-labelledby), so getByLabel can't find it - scope by the
-      // containing form-group instead, same pattern SearchableDropdown
+
+      // negative check: this field becomes mandatory once risks = Yes.
+      // confirm the app actually enforces that - not just that we fill it -
+      // by trying to move on while it's still blank first
+      await this.next();
+      await this.validation.expectMissingField('Description of the risks');
+
+      // the label isn't programmatically associated with its textarea (no
+      // for/id, no aria-labelledby), so getByLabel can't find it - scope by
+      // the containing form-group instead, same pattern SearchableDropdown
       // and RadioGroup.chooseWithinGroup already use for this app
       await this.page
         .locator('.form-group')
