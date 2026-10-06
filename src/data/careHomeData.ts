@@ -54,7 +54,7 @@ function toUkDate(date: Date): string {
   return `${day}/${month}/${date.getFullYear()}`;
 }
 
-export function buildCareHomeData(): CareHomeData {
+export function buildCareHomeData(overrides: Partial<CareHomeData> = {}): CareHomeData {
   const gender: 'Male' | 'Female' = faker.person.sexType() === 'male' ? 'Male' : 'Female';
   const firstName = faker.person.firstName(gender === 'Male' ? 'male' : 'female');
   const lastName = faker.person.lastName();
@@ -113,5 +113,6 @@ export function buildCareHomeData(): CareHomeData {
       phone: faker.phone.number(),
       additionalInfo: faker.lorem.sentence(),
     },
+    ...overrides,
   };
 }

@@ -72,3 +72,15 @@ test('fills the care within the home wizard without submitting', async ({ page }
   await expect(wizard.summaryHeading).toBeVisible();
   await expect(wizard.submitButton).toBeVisible();
 });
+
+// branch coverage: every other test answers 'Yes' to this question, so
+// the "No" path (and whatever it hides or reveals instead) has never
+// actually been exercised
+test('fills the care within the home wizard when not a hospital discharge', async ({ page }) => {
+  const data = buildCareHomeData({ isHospitalDischarge: 'No' });
+  const wizard = await openCareHomeWizard(page);
+  await fillWizardThroughSummary(wizard, data);
+
+  await expect(wizard.summaryHeading).toBeVisible();
+  await expect(wizard.submitButton).toBeVisible();
+});
