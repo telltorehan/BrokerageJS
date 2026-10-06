@@ -3,6 +3,7 @@ import { CheckboxGroup } from '../components/CheckboxGroup';
 import { RadioGroup } from '../components/RadioGroup';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { SearchableDropdown } from '../components/SearchableDropdown';
+import { WizardNavigation } from '../components/WizardNavigation';
 import { AlternativeContact } from '../data/referralData';
 import { CareHomeClientDetails, CareHomeData } from '../data/careHomeData';
 
@@ -12,6 +13,7 @@ export class CareHomeWizard {
   private readonly additionalMedicalHistory: RichTextEditor;
   private readonly otherInformation: RichTextEditor;
   private readonly internalNotes: RichTextEditor;
+  private readonly navigation: WizardNavigation;
 
   constructor(private readonly page: Page) {
     this.radios = new RadioGroup(page);
@@ -21,6 +23,7 @@ export class CareHomeWizard {
     // unlike Residential, this form's internal notes field is TinyMCE
     // rich text, not a plain textarea - same id, different widget
     this.internalNotes = new RichTextEditor(page, '#Ref_BrokerageTeam_ifr');
+    this.navigation = new WizardNavigation(page);
   }
 
   get summaryHeading(): Locator {
@@ -42,7 +45,7 @@ export class CareHomeWizard {
   }
 
   private async next(): Promise<void> {
-    await this.page.getByText('Next', { exact: true }).click();
+    await this.navigation.next();
   }
 
   async completeIntro(): Promise<void> {
