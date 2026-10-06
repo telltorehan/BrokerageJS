@@ -3,7 +3,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 60_000,
+  // a full wizard run against the real app is ~15 steps; branch-coverage
+  // variants add a few more conditional fields each, and every "Next"
+  // click now also checks for the app's validation popup, adding ~2s per
+  // step. 60s was already tight for the plain path - real bugs still fail
+  // fast since dropdown selects and element waits have their own short
+  // timeouts well under this
+  timeout: 90_000,
   expect: {
     timeout: 10_000,
   },
