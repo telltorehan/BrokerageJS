@@ -84,3 +84,25 @@ test('fills the care within the home wizard when not a hospital discharge', asyn
   await expect(wizard.summaryHeading).toBeVisible();
   await expect(wizard.submitButton).toBeVisible();
 });
+
+// branch coverage: every other test answers 'Yes', so the fields LAS
+// 'No' hides (or anything it might instead require) are unverified
+test('fills the care within the home wizard without an LAS number', async ({ page }) => {
+  const data = buildCareHomeData({ hasLasNumber: 'No' });
+  const wizard = await openCareHomeWizard(page);
+  await fillWizardThroughSummary(wizard, data);
+
+  await expect(wizard.summaryHeading).toBeVisible();
+  await expect(wizard.submitButton).toBeVisible();
+});
+
+// branch coverage: every other test picks 'Hospital team', so the
+// 'Locality team' path has never been exercised
+test('fills the care within the home wizard for a locality team referral', async ({ page }) => {
+  const data = buildCareHomeData({ referralTeamType: 'Locality team' });
+  const wizard = await openCareHomeWizard(page);
+  await fillWizardThroughSummary(wizard, data);
+
+  await expect(wizard.summaryHeading).toBeVisible();
+  await expect(wizard.submitButton).toBeVisible();
+});
