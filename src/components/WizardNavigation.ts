@@ -36,7 +36,10 @@ export class WizardNavigation {
       if (await dialog.isVisible()) {
         return true;
       }
-      await this.page.waitForTimeout(100);
+      // a plain timer, not page.waitForTimeout() - that's a Playwright
+      // action Playwright itself discourages and flags in the trace/report,
+      // even though it doesn't fail anything. this isn't tracked at all
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
     return dialog.isVisible();
   }
