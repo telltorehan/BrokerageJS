@@ -119,3 +119,15 @@ test('fills the care within the home wizard for a client in a care home', async 
   await expect(wizard.summaryHeading).toBeVisible();
   await expect(wizard.submitButton).toBeVisible();
 });
+
+// branch coverage: the last untested option for usual residence - still
+// unconfirmed what fields (if any) this swaps the street address for
+test('fills the care within the home wizard for a client in supported independent living', async ({ page }) => {
+  const data = buildCareHomeData();
+  data.client.usualResidence = 'Supported independent living';
+  const wizard = await openCareHomeWizard(page);
+  await fillWizardThroughSummary(wizard, data);
+
+  await expect(wizard.summaryHeading).toBeVisible();
+  await expect(wizard.submitButton).toBeVisible();
+});
