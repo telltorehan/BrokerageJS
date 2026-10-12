@@ -128,9 +128,14 @@ export class CareHomeWizard {
       // turned off here specifically
       await SearchableDropdown.byLabel(this.page, 'Care Home').select(client.careHomeName);
       await this.radios.chooseWithinGroup('Reason for moving', client.reasonForMoving, false);
+    } else if (client.usualResidence === 'Supported independent living') {
+      // confirmed via branch coverage - same 'Reason for moving' group as
+      // the Care home branch, plus its own organisation dropdown
+      await SearchableDropdown.byLabel(this.page, 'Supported independent living organisation').select(
+        client.livingOrganisationName,
+      );
+      await this.radios.chooseWithinGroup('Reason for moving', client.reasonForMoving, false);
     }
-    // "Supported independent living" still unconfirmed - next() will
-    // surface whatever it requires that we're not yet filling
     await this.next();
   }
 

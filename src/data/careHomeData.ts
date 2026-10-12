@@ -18,7 +18,11 @@ export interface CareHomeClientDetails {
   postcode: string;
   // only used when usualResidence is 'Care home' - confirmed real options
   careHomeName: string;
+  // 'Reason for moving' is reused as-is for 'Supported independent
+  // living' too - same radio group, confirmed from the real page
   reasonForMoving: string;
+  // only used when usualResidence is 'Supported independent living'
+  livingOrganisationName: string;
 }
 
 export interface CareHomeCareNeed {
@@ -109,6 +113,7 @@ export function buildCareHomeData(overrides: Partial<CareHomeData> = {}): CareHo
       usualResidence: 'Home',
       careHomeName: 'Test',
       reasonForMoving: 'Client choice',
+      livingOrganisationName: 'Test',
       addressLine1: faker.location.buildingNumber(),
       addressLine2: faker.location.street(),
       town: faker.location.city(),
