@@ -106,3 +106,16 @@ test('fills the care within the home wizard for a locality team referral', async
   await expect(wizard.summaryHeading).toBeVisible();
   await expect(wizard.submitButton).toBeVisible();
 });
+
+// branch coverage: every other test answers 'Home', the app's own
+// default - 'Care home' has never been selected, and likely swaps the
+// street address fields for something else entirely (unconfirmed)
+test('fills the care within the home wizard for a client in a care home', async ({ page }) => {
+  const data = buildCareHomeData();
+  data.client.usualResidence = 'Care home';
+  const wizard = await openCareHomeWizard(page);
+  await fillWizardThroughSummary(wizard, data);
+
+  await expect(wizard.summaryHeading).toBeVisible();
+  await expect(wizard.submitButton).toBeVisible();
+});

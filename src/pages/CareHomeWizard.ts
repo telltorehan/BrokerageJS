@@ -113,11 +113,17 @@ export class CareHomeWizard {
   }
 
   async completeAddress(client: CareHomeClientDetails): Promise<void> {
-    await this.page.locator('#Address_Line1').fill(client.addressLine1);
-    await this.page.locator('#Address_Line2').fill(client.addressLine2);
-    await this.page.locator('#Town_CHA').fill(client.town);
-    await this.page.locator('#County').fill(client.county);
-    await this.page.locator('#Ref_Client_Postcode').fill(client.postcode);
+    await this.radios.chooseWithinGroup('Where does the client usually reside?', client.usualResidence);
+    // "Home" is the only branch confirmed so far - the other two options
+    // likely swap in different fields instead of a street address, which
+    // the validation-aware next() will surface if we're missing anything
+    if (client.usualResidence === 'Home') {
+      await this.page.locator('#Address_Line1').fill(client.addressLine1);
+      await this.page.locator('#Address_Line2').fill(client.addressLine2);
+      await this.page.locator('#Town_CHA').fill(client.town);
+      await this.page.locator('#County').fill(client.county);
+      await this.page.locator('#Ref_Client_Postcode').fill(client.postcode);
+    }
     await this.next();
   }
 

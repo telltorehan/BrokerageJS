@@ -8,6 +8,10 @@ export interface CareHomeClientDetails {
   dobDisplay: string;
   gender: 'Male' | 'Female';
   serviceUserGroup: string;
+  // "Home" is the app's own default, and the only branch confirmed so
+  // far - "Care home" and "Supported independent living" likely swap in
+  // different fields instead of a street address, but that's unconfirmed
+  usualResidence: 'Care home' | 'Home' | 'Supported independent living';
   addressLine1: string;
   addressLine2: string;
   town: string;
@@ -100,6 +104,7 @@ export function buildCareHomeData(overrides: Partial<CareHomeData> = {}): CareHo
       dobDisplay: toUkDate(dob),
       gender,
       serviceUserGroup: 'Older People',
+      usualResidence: 'Home',
       addressLine1: faker.location.buildingNumber(),
       addressLine2: faker.location.street(),
       town: faker.location.city(),
