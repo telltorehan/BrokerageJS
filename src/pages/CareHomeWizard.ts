@@ -114,16 +114,23 @@ export class CareHomeWizard {
 
   async completeAddress(client: CareHomeClientDetails): Promise<void> {
     await this.radios.chooseWithinGroup('Where does the client usually reside?', client.usualResidence);
-    // "Home" is the only branch confirmed so far - the other two options
-    // likely swap in different fields instead of a street address, which
-    // the validation-aware next() will surface if we're missing anything
     if (client.usualResidence === 'Home') {
       await this.page.locator('#Address_Line1').fill(client.addressLine1);
       await this.page.locator('#Address_Line2').fill(client.addressLine2);
       await this.page.locator('#Town_CHA').fill(client.town);
       await this.page.locator('#County').fill(client.county);
       await this.page.locator('#Ref_Client_Postcode').fill(client.postcode);
+    } else if (client.usualResidence === 'Care home') {
+      // confirmed via branch coverage - swaps the street address for a
+      // care home dropdown and a reason-for-moving radio group. the
+      // radio options' accessible names are oddly duplicated by the app
+      // itself (e.g. "Client choice Client choice"), so exact match is
+      // turned off here specifically
+      await SearchableDropdown.byLabel(this.page, 'Care Home').select(client.careHomeName);
+      await this.radios.chooseWithinGroup('Reason for moving', client.reasonForMoving, false);
     }
+    // "Supported independent living" still unconfirmed - next() will
+    // surface whatever it requires that we're not yet filling
     await this.next();
   }
 

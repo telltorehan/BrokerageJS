@@ -59,9 +59,13 @@ export class SearchableDropdown {
     // closed its own menu with Escape before returning. a short timeout
     // means a typo'd option name fails fast rather than burning the whole
     // test timeout on a click that can never resolve
+    // some dropdowns in this app genuinely have two options with identical
+    // text (e.g. the "Care Home" list has "Test" listed twice) - take the
+    // first match deterministically instead of a strict-mode violation
     await this.page
       .locator('a[role="option"]:visible')
       .filter({ hasText: new RegExp(`^${escapeForRegExp(optionText)}$`) })
+      .first()
       .click({ timeout: 5000 });
     // the open menu sits on top of whatever field comes next, close it
     // explicitly rather than relying on the click having done that
