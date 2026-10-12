@@ -12,11 +12,17 @@ export class RadioGroup {
   // match more than one unrelated question at a time. scope to the
   // specific field's own group when that happens, same approach
   // SearchableDropdown uses for its label lookup
-  async chooseWithinGroup(groupLabel: string, optionLabel: string, exact = true): Promise<void> {
+  async chooseWithinGroup(groupLabel: string, optionLabel: string, exact = true, force = false): Promise<void> {
     const group = this.page
       .locator('.form-group')
       .filter({ has: this.page.locator('label', { hasText: groupLabel }) })
       .first();
-    await group.getByLabel(optionLabel, { exact }).check();
+    // some custom radio widgets visually hide the real <input> behind a
+    // styled sibling, while the <label> association is still genuine -
+    // check() then correctly resolves the input but fails the visibility
+    // actionability check. force is only passed where confirmed needed,
+    // not by default, so a real "didn't find the right element" bug
+    // elsewhere still fails loudly instead of being silently bypassed
+    await group.getByLabel(optionLabel, { exact }).check({ force });
   }
 }

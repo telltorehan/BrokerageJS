@@ -134,7 +134,11 @@ export class CareHomeWizard {
       await SearchableDropdown.byLabel(this.page, 'Supported independent living organisation').select(
         client.livingOrganisationName,
       );
-      await this.radios.chooseWithinGroup('Reason for moving', client.reasonForMoving, false);
+      // unlike the Care home instance of this same group, this one's
+      // radio inputs are visually hidden behind a styled sibling -
+      // confirmed from the real failure, which resolved the correct
+      // input via its label but couldn't act on it (not visible)
+      await this.radios.chooseWithinGroup('Reason for moving', client.reasonForMoving, false, true);
     }
     await this.next();
   }
