@@ -35,6 +35,24 @@ export class SearchableDropdown {
     return new SearchableDropdown(page, page.locator(`button[role="combobox"][data-id="${dataId}"]`));
   }
 
+  // wraps a toggle handle the caller already scoped uniquely (e.g. from
+  // scanning one specific .form-group), bypassing the page-wide label
+  // search entirely - used by the exploration engine, where every field
+  // is already a concrete handle rather than something to re-find by text
+  static fromToggle(page: Page, toggle: Locator): SearchableDropdown {
+    return new SearchableDropdown(page, toggle);
+  }
+
+  // reads the real option list from the open menu, for callers that don't
+  // know the right value ahead of time (the exploration engine)
+  async readOptions(): Promise<string[]> {
+    await this.toggle.first().scrollIntoViewIfNeeded();
+    await this.toggle.first().click();
+    const texts = await this.page.locator('a[role="option"]:visible').allTextContents();
+    await this.page.keyboard.press('Escape');
+    return texts.map((text) => text.trim()).filter((text) => text.length > 0);
+  }
+
   async isPresent(timeout = 1000): Promise<boolean> {
     try {
       await this.toggle.first().waitFor({ state: 'attached', timeout });
