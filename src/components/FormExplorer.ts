@@ -111,12 +111,18 @@ function guessTextValue(label: string, isTextarea: boolean): string {
   if (l.includes('nhs number')) return faker.string.numeric(10);
   // "las number" doesn't contain "nhs number"/"phone"/"postcode" etc, so
   // it fell through to the generic phrase fallback (confirmed from a
-  // real run: got "No change" and "Ongoing review")
-  if (l.includes('las number')) return faker.string.numeric(8);
+  // real run: got "No change" and "Ongoing review"). but the negative
+  // branch's own field - "Describe why the client does not have an LAS
+  // number" - also contains that exact substring and wants an
+  // explanation, not a number (confirmed: the first version of this fix
+  // put a number in it) - exclude anything phrased as a question
+  if (l.includes('las number') && !l.includes('describe') && !l.includes('why')) {
+    return faker.string.numeric(8);
+  }
   if (l.includes('postcode') || l.includes('post code')) return faker.location.zipCode();
   if (l.includes('house name')) return faker.helpers.arrayElement(HOUSE_NAMES);
   if (l.includes('ward')) return faker.helpers.arrayElement(WARD_NAMES);
-  if (l.includes('street')) return faker.location.street();
+  if (l.includes('street') || l.includes('address')) return faker.location.street();
   // "cost" and "location" fell through to the generic phrase fallback
   // for the same reason - neither matched anything more specific
   if (l.includes('cost')) return `£${faker.number.int({ min: 250, max: 1200 })}`;

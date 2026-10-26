@@ -54,17 +54,19 @@ export class SearchableDropdown {
     await this.toggle.first().click();
     const optionLocator = this.page.locator('a[role="option"]:visible');
 
-    // a dropdown revealed by an earlier answer can have its option list
-    // populated a moment after the toggle itself becomes clickable (seen
-    // live: reading immediately after the click found zero options, only
-    // recovered because the wizard's own required-field check caught the
-    // empty result and retried it) - poll briefly instead of reading once
-    // 1.5s wasn't enough margin in practice - a real run still saw this
-    // dropdown's options empty on the first read, only resolved because
-    // the wizard's own required-field check caught it and retried it.
-    // the loop exits the moment real options appear, so raising the cap
-    // doesn't slow down the (overwhelmingly common) non-racing case
-    const real = await this.pollForRealOptions(optionLocator, 3000);
+    // a dropdown revealed by an earlier answer can still find zero
+    // options even after polling for them - raising the poll timeout to
+    // 3s didn't fix a real recurrence of this, which points to the click
+    // itself not having opened the menu at all (clicked a moment too
+    // early, before the widget's own handler was wired up after being
+    // revealed) rather than the options merely loading slowly. polling
+    // alone can't recover from that, since nothing re-opens the menu - a
+    // second click, now that more time has passed, does
+    let real = await this.pollForRealOptions(optionLocator, 1500);
+    if (real.length === 0) {
+      await this.toggle.first().click();
+      real = await this.pollForRealOptions(optionLocator, 1500);
+    }
 
     if (real.length === 0) {
       await this.page.keyboard.press('Escape');
