@@ -92,7 +92,20 @@ const SHORT_NOTES = ['As needed', 'To be confirmed', 'Ongoing review', 'See note
 function guessTextValue(label: string, isTextarea: boolean): string {
   const l = label.toLowerCase();
   if (l.includes('email')) return faker.internet.email();
-  if (l.includes('phone') || l.includes('telephone') || l.includes('tel number') || l.includes('contact no')) {
+  // "contact no" (the previous check) only matches an abbreviated label
+  // like "Contact No" - it's not a substring of "contact number" (the
+  // "o" after "n" has to be immediately followed by another "o", not
+  // "umber"), so a real field labelled "Alternative contact number" fell
+  // through to the generic fallback and got a phrase instead of digits
+  if (
+    l.includes('phone') ||
+    l.includes('telephone') ||
+    l.includes('tel number') ||
+    l.includes('tel no') ||
+    l.includes('contact no') ||
+    l.includes('contact number') ||
+    l.includes('mobile')
+  ) {
     return `07${faker.string.numeric(9)}`;
   }
   if (l.includes('nhs number')) return faker.string.numeric(10);
