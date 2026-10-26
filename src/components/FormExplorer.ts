@@ -61,7 +61,10 @@ function guessTextValue(label: string, isTextarea: boolean): string {
     return `07${faker.string.numeric(9)}`;
   }
   if (l.includes('nhs number')) return faker.string.numeric(10);
-  if (l.includes('postcode') || l.includes('post code')) return faker.location.zipCode();
+  // faker's default zipCode() is US-shaped (5 digits) - this is a UK
+  // app, same reason the phone format above needs a leading zero
+  if (l.includes('postcode') || l.includes('post code')) return ukPostcode();
+  if (l.includes('street')) return faker.location.street();
   if (l.includes('date of birth') || l.includes('dob')) {
     const dob = faker.date.birthdate({ min: 70, max: 95, mode: 'age' });
     return `${String(dob.getDate()).padStart(2, '0')}/${String(dob.getMonth() + 1).padStart(2, '0')}/${dob.getFullYear()}`;
@@ -72,8 +75,23 @@ function guessTextValue(label: string, isTextarea: boolean): string {
   }
   if (l.includes('first name')) return faker.person.firstName();
   if (l.includes('last name') || l.includes('surname')) return faker.person.lastName();
-  if (l.includes('name')) return faker.person.fullName();
+  // "name" alone is too broad a match - it also catches labels like
+  // "street name" or "hospital name" that aren't about a person at all
+  // (confirmed from a real run: those got a fake person's name as their
+  // value). only treat it as a person's name when the label actually
+  // says so
+  if (/\b(client|contact|patient|resident|full)\s*name\b/.test(l) || l.trim() === 'name') {
+    return faker.person.fullName();
+  }
   return isTextarea ? faker.lorem.sentence() : faker.lorem.words(2);
+}
+
+// a plausible-looking UK postcode (e.g. "W5 3LK") - doesn't need to be a
+// real one, just shaped like one instead of a US zip code
+function ukPostcode(): string {
+  const letter = () => faker.string.alpha({ length: 1, casing: 'upper' });
+  const digit = () => faker.number.int({ min: 1, max: 9 });
+  return `${letter()}${digit()} ${digit()}${letter()}${letter()}`;
 }
 
 export class FormExplorer {
