@@ -59,7 +59,12 @@ export class SearchableDropdown {
     // live: reading immediately after the click found zero options, only
     // recovered because the wizard's own required-field check caught the
     // empty result and retried it) - poll briefly instead of reading once
-    const real = await this.pollForRealOptions(optionLocator, 1500);
+    // 1.5s wasn't enough margin in practice - a real run still saw this
+    // dropdown's options empty on the first read, only resolved because
+    // the wizard's own required-field check caught it and retried it.
+    // the loop exits the moment real options appear, so raising the cap
+    // doesn't slow down the (overwhelmingly common) non-racing case
+    const real = await this.pollForRealOptions(optionLocator, 3000);
 
     if (real.length === 0) {
       await this.page.keyboard.press('Escape');

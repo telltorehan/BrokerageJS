@@ -109,10 +109,18 @@ function guessTextValue(label: string, isTextarea: boolean): string {
     return `07${faker.string.numeric(9)}`;
   }
   if (l.includes('nhs number')) return faker.string.numeric(10);
+  // "las number" doesn't contain "nhs number"/"phone"/"postcode" etc, so
+  // it fell through to the generic phrase fallback (confirmed from a
+  // real run: got "No change" and "Ongoing review")
+  if (l.includes('las number')) return faker.string.numeric(8);
   if (l.includes('postcode') || l.includes('post code')) return faker.location.zipCode();
   if (l.includes('house name')) return faker.helpers.arrayElement(HOUSE_NAMES);
   if (l.includes('ward')) return faker.helpers.arrayElement(WARD_NAMES);
   if (l.includes('street')) return faker.location.street();
+  // "cost" and "location" fell through to the generic phrase fallback
+  // for the same reason - neither matched anything more specific
+  if (l.includes('cost')) return `£${faker.number.int({ min: 250, max: 1200 })}`;
+  if (l.includes('location')) return faker.location.city();
   if (l.includes('town') || l.includes('city')) return faker.location.city();
   if (l.includes('county')) return faker.location.county();
   if (l.includes('duration')) return faker.helpers.arrayElement(DURATIONS);
@@ -131,7 +139,7 @@ function guessTextValue(label: string, isTextarea: boolean): string {
   // (confirmed from a real run: those got a fake person's name as their
   // value). only treat it as a person's name when the label actually
   // says so
-  if (/\b(client|contact|patient|resident|full)\s*name\b/.test(l) || l.trim() === 'name') {
+  if (/\b(client|contact|patient|resident|full|alternative)\s*name\b/.test(l) || l.trim() === 'name') {
     return faker.person.fullName();
   }
   if (l.includes('goal')) return faker.helpers.arrayElement(CARE_GOALS);
