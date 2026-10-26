@@ -1,4 +1,7 @@
-import { faker } from '@faker-js/faker';
+// this is a UK app (NHS/LAS terms, UK phone and postcode formats
+// elsewhere) - the GB locale gives names, addresses and counties that
+// actually look UK-shaped instead of faker's US-flavoured defaults
+import { fakerEN_GB as faker } from '@faker-js/faker';
 import { Locator, Page } from '@playwright/test';
 import { RichTextEditor } from './RichTextEditor';
 import { SearchableDropdown } from './SearchableDropdown';
@@ -50,6 +53,36 @@ async function checkWithFallback(locator: Locator): Promise<void> {
   }
 }
 
+// faker's lorem module is deliberately nonsense placeholder text in any
+// locale (lorem ipsum doesn't localise), so free-text fields with no more
+// specific guess get a real English phrase from one of these banks
+// instead - a report reviewed by a person should read like plausible
+// care-referral content, not Latin filler
+const CARE_GOALS = [
+  'Support the client to maintain independence with daily living tasks.',
+  'Help the client re-establish a stable routine after a hospital stay.',
+  'Reduce the client’s risk of falls and improve mobility around the home.',
+  'Build the client’s confidence to manage medication independently.',
+  'Support the client with meal preparation and a balanced diet.',
+  'Help the client reconnect with family and the local community.',
+  'Monitor the client’s wellbeing and respond early to any change in need.',
+];
+
+const CARE_NOTES = [
+  'No known allergies at the time of referral.',
+  'Family have been informed and are supportive of the plan.',
+  'Client prefers morning visits where possible.',
+  'Previous care package ended due to a change in circumstances.',
+  'Client lives alone and has limited mobility.',
+  'The allocated social worker should be kept informed of any changes.',
+];
+
+const DURATIONS = ['30 minutes', '45 minutes', '1 hour', '1.5 hours', '2 hours'];
+
+const HOUSE_NAMES = ['The Oaks', 'Rose Cottage', 'Maple House', 'The Old Vicarage', 'Willow Lodge', 'Elm Court'];
+
+const SHORT_NOTES = ['As needed', 'To be confirmed', 'Ongoing review', 'See notes', 'Standard package', 'No change'];
+
 // picks a plausible value for a plain text/textarea field from its label
 // text - reuses the exact formats already confirmed to pass this app's
 // own validation (UK phone numbers need a leading zero, etc), rather than
@@ -61,10 +94,12 @@ function guessTextValue(label: string, isTextarea: boolean): string {
     return `07${faker.string.numeric(9)}`;
   }
   if (l.includes('nhs number')) return faker.string.numeric(10);
-  // faker's default zipCode() is US-shaped (5 digits) - this is a UK
-  // app, same reason the phone format above needs a leading zero
-  if (l.includes('postcode') || l.includes('post code')) return ukPostcode();
+  if (l.includes('postcode') || l.includes('post code')) return faker.location.zipCode();
+  if (l.includes('house name')) return faker.helpers.arrayElement(HOUSE_NAMES);
   if (l.includes('street')) return faker.location.street();
+  if (l.includes('town') || l.includes('city')) return faker.location.city();
+  if (l.includes('county')) return faker.location.county();
+  if (l.includes('duration')) return faker.helpers.arrayElement(DURATIONS);
   if (l.includes('date of birth') || l.includes('dob')) {
     const dob = faker.date.birthdate({ min: 70, max: 95, mode: 'age' });
     return `${String(dob.getDate()).padStart(2, '0')}/${String(dob.getMonth() + 1).padStart(2, '0')}/${dob.getFullYear()}`;
@@ -83,15 +118,11 @@ function guessTextValue(label: string, isTextarea: boolean): string {
   if (/\b(client|contact|patient|resident|full)\s*name\b/.test(l) || l.trim() === 'name') {
     return faker.person.fullName();
   }
-  return isTextarea ? faker.lorem.sentence() : faker.lorem.words(2);
-}
-
-// a plausible-looking UK postcode (e.g. "W5 3LK") - doesn't need to be a
-// real one, just shaped like one instead of a US zip code
-function ukPostcode(): string {
-  const letter = () => faker.string.alpha({ length: 1, casing: 'upper' });
-  const digit = () => faker.number.int({ min: 1, max: 9 });
-  return `${letter()}${digit()} ${digit()}${letter()}${letter()}`;
+  if (l.includes('goal')) return faker.helpers.arrayElement(CARE_GOALS);
+  if (l.includes('note') || l.includes('risk') || l.includes('reason') || l.includes('comment')) {
+    return isTextarea ? faker.helpers.arrayElement(CARE_NOTES) : faker.helpers.arrayElement(SHORT_NOTES);
+  }
+  return isTextarea ? faker.helpers.arrayElement(CARE_NOTES) : faker.helpers.arrayElement(SHORT_NOTES);
 }
 
 export class FormExplorer {
@@ -300,7 +331,7 @@ export class FormExplorer {
           const iframe = group.locator('iframe[id$="_ifr"]').first();
           const iframeId = await iframe.getAttribute('id');
           if (iframeId) {
-            value = faker.lorem.sentence();
+            value = faker.helpers.arrayElement(CARE_NOTES);
             await new RichTextEditor(this.page, `#${iframeId}`).fill(value);
           }
           break;
