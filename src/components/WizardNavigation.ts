@@ -11,7 +11,16 @@ export class WizardNavigation {
   constructor(private readonly page: Page) {}
 
   async next(): Promise<void> {
-    await this.page.getByText('Next', { exact: true }).click();
+    // the final data-entry step of a wizard labels its advance button
+    // "Continue to summary" instead of "Next" - the hand-written wizards
+    // never call next() on that specific step, so this never mattered
+    // before, but the exploration engine calls next() uniformly on every
+    // step and would otherwise hang the full test timeout clicking a
+    // button that doesn't exist on that page
+    const advance = this.page
+      .getByText('Next', { exact: true })
+      .or(this.page.getByText('Continue to summary', { exact: true }));
+    await advance.click();
 
     const dialog = this.page.getByRole('dialog').filter({ hasText: 'Problem' });
     // the dialog usually never appears - that's the success case on
