@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import { Locator, Page } from '@playwright/test';
 
 function escapeForRegExp(text: string): string {
@@ -43,14 +44,30 @@ export class SearchableDropdown {
     return new SearchableDropdown(page, toggle);
   }
 
-  // reads the real option list from the open menu, for callers that don't
-  // know the right value ahead of time (the exploration engine)
-  async readOptions(): Promise<string[]> {
+  // reads the real option list and picks one in a single open/close
+  // cycle, for callers that don't know the right value ahead of time
+  // (the exploration engine) - opening the menu twice (once to read,
+  // once to click) doubled every dropdown's interaction time for no
+  // benefit, which matters a lot once a form has 15-20 dropdowns
+  async selectRandom(): Promise<string | undefined> {
     await this.toggle.first().scrollIntoViewIfNeeded();
     await this.toggle.first().click();
-    const texts = await this.page.locator('a[role="option"]:visible').allTextContents();
+    const optionLocator = this.page.locator('a[role="option"]:visible');
+    const texts = (await optionLocator.allTextContents()).map((text) => text.trim()).filter((text) => text.length > 0);
+    const real = texts.filter((text) => !/^-?\s*(please )?select\s*-?$/i.test(text));
+
+    if (real.length === 0) {
+      await this.page.keyboard.press('Escape');
+      return undefined;
+    }
+
+    const picked = faker.helpers.arrayElement(real);
+    await optionLocator
+      .filter({ hasText: new RegExp(`^${escapeForRegExp(picked)}$`) })
+      .first()
+      .click({ timeout: 5000 });
     await this.page.keyboard.press('Escape');
-    return texts.map((text) => text.trim()).filter((text) => text.length > 0);
+    return picked;
   }
 
   async isPresent(timeout = 1000): Promise<boolean> {

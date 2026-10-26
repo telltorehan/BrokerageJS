@@ -22,6 +22,11 @@ test.beforeEach(() => {
 // be checked against known-good ground truth before trusting it on a
 // form nobody has explored yet.
 test('explores the care within the home form and reports what it finds', async ({ page }) => {
+  // a generic scan-and-fill pass does more DOM work per field than a
+  // hand-written flow (re-scans the whole step after every fill), so the
+  // default 90s budget is too tight even for a run that completes correctly
+  test.setTimeout(240_000);
+
   const login = new LoginPage(page);
   await login.goto();
   await login.login(email, password);

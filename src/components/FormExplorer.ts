@@ -76,14 +76,6 @@ function guessTextValue(label: string, isTextarea: boolean): string {
   return isTextarea ? faker.lorem.sentence() : faker.lorem.words(2);
 }
 
-function pickNonPlaceholder(options: string[]): string | undefined {
-  const real = options.filter((option) => !/^-?\s*(please )?select\s*-?$/i.test(option) && option.length > 0);
-  if (real.length === 0) {
-    return undefined;
-  }
-  return faker.helpers.arrayElement(real);
-}
-
 export class FormExplorer {
   private readonly navigation: WizardNavigation;
 
@@ -261,10 +253,8 @@ export class FormExplorer {
       switch (kind) {
         case 'dropdown': {
           const dropdown = SearchableDropdown.fromToggle(this.page, group.locator('button[role="combobox"]'));
-          const options = await dropdown.readOptions();
-          const picked = pickNonPlaceholder(options);
+          const picked = await dropdown.selectRandom();
           if (picked) {
-            await dropdown.select(picked);
             value = picked;
           }
           break;
