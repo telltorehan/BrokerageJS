@@ -81,6 +81,8 @@ const DURATIONS = ['30 minutes', '45 minutes', '1 hour', '1.5 hours', '2 hours']
 
 const HOUSE_NAMES = ['The Oaks', 'Rose Cottage', 'Maple House', 'The Old Vicarage', 'Willow Lodge', 'Elm Court'];
 
+const WARD_NAMES = ['Ward 4', 'Ward 7', 'Nightingale Ward', 'Meadow Ward', 'Oak Ward', 'Birch Ward'];
+
 const SHORT_NOTES = ['As needed', 'To be confirmed', 'Ongoing review', 'See notes', 'Standard package', 'No change'];
 
 // picks a plausible value for a plain text/textarea field from its label
@@ -96,6 +98,7 @@ function guessTextValue(label: string, isTextarea: boolean): string {
   if (l.includes('nhs number')) return faker.string.numeric(10);
   if (l.includes('postcode') || l.includes('post code')) return faker.location.zipCode();
   if (l.includes('house name')) return faker.helpers.arrayElement(HOUSE_NAMES);
+  if (l.includes('ward')) return faker.helpers.arrayElement(WARD_NAMES);
   if (l.includes('street')) return faker.location.street();
   if (l.includes('town') || l.includes('city')) return faker.location.city();
   if (l.includes('county')) return faker.location.county();

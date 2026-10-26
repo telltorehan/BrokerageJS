@@ -53,8 +53,13 @@ export class SearchableDropdown {
     await this.toggle.first().scrollIntoViewIfNeeded();
     await this.toggle.first().click();
     const optionLocator = this.page.locator('a[role="option"]:visible');
-    const texts = (await optionLocator.allTextContents()).map((text) => text.trim()).filter((text) => text.length > 0);
-    const real = texts.filter((text) => !/^-?\s*(please )?select\s*-?$/i.test(text));
+
+    // a dropdown revealed by an earlier answer can have its option list
+    // populated a moment after the toggle itself becomes clickable (seen
+    // live: reading immediately after the click found zero options, only
+    // recovered because the wizard's own required-field check caught the
+    // empty result and retried it) - poll briefly instead of reading once
+    const real = await this.pollForRealOptions(optionLocator, 1500);
 
     if (real.length === 0) {
       await this.page.keyboard.press('Escape');
@@ -68,6 +73,20 @@ export class SearchableDropdown {
       .click({ timeout: 5000 });
     await this.page.keyboard.press('Escape');
     return picked;
+  }
+
+  private async pollForRealOptions(optionLocator: Locator, timeoutMs: number): Promise<string[]> {
+    const deadline = Date.now() + timeoutMs;
+    let real: string[] = [];
+    do {
+      const texts = (await optionLocator.allTextContents()).map((text) => text.trim()).filter((text) => text.length > 0);
+      real = texts.filter((text) => !/^-?\s*(please )?select\s*-?$/i.test(text));
+      if (real.length > 0) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } while (Date.now() < deadline);
+    return real;
   }
 
   async isPresent(timeout = 1000): Promise<boolean> {
