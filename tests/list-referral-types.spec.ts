@@ -23,13 +23,12 @@ test('lists every referral type offered by the new-referral modal', async ({ pag
   await dashboard.waitForLoaded();
   await dashboard.startNewReferral();
 
-  const tiles = page.locator('#generalModal').getByRole('link').or(page.locator('#generalModal').getByRole('button'));
-  const count = await tiles.count();
-  console.log(`Found ${count} referral type tile(s):`);
-  for (let i = 0; i < count; i += 1) {
-    const text = (await tiles.nth(i).textContent())?.trim().replace(/\s+/g, ' ');
-    console.log(`  [${i}] ${text}`);
-  }
+  // the tiles turned out not to have link/button roles at all (that
+  // selector only matched the modal's own close controls) - dumping the
+  // modal's raw text sidesteps needing to know their real tag/role
+  const raw = await page.locator('#generalModal').innerText();
+  console.log('Modal text:');
+  console.log(raw);
 
   await expect(page.locator('#generalModal')).toBeVisible();
 });
