@@ -24,25 +24,29 @@ function statusMark(field: FilledField): string {
   return '<span class="mark tick">✓</span>';
 }
 
-function fieldRows(fields: FilledField[], depth: number): string {
+// a visible band (not a collapsible section) so every field stays
+// readable without clicking anything, while still making it obvious at
+// a glance which step a given row belongs to while scanning down a long
+// table - alternates per step, so adjacent steps are never the same band
+function fieldRows(fields: FilledField[], depth: number, band: 'band-a' | 'band-b'): string {
   let rows = '';
   for (const field of fields) {
     if (field.kind === 'unknown') {
-      rows += `<tr><td></td><td colspan="3" class="revealed">${'—'.repeat(depth)} ${esc(field.label)}</td></tr>`;
+      rows += `<tr class="${band}"><td></td><td colspan="3" class="revealed">${'—'.repeat(depth)} ${esc(field.label)}</td></tr>`;
       continue;
     }
     const isFailed = field.value.startsWith('<failed:');
     const isEmpty = field.value === '';
     const valueClass = isFailed ? 'value failed' : isEmpty ? 'value empty' : 'value';
     const valueText = isFailed ? stripAnsi(field.value) : isEmpty ? '(empty)' : field.value;
-    rows += `<tr>
+    rows += `<tr class="${band}">
       <td class="status">${statusMark(field)}</td>
       <td>${'—'.repeat(depth)} ${esc(field.label)}${field.optional ? ' <span class="meta">(optional)</span>' : ''}</td>
       <td class="kind">${esc(field.kind)}</td>
       <td class="${valueClass}">${esc(valueText)}</td>
     </tr>`;
     if (field.revealed.length) {
-      rows += fieldRows(field.revealed, depth + 1);
+      rows += fieldRows(field.revealed, depth + 1, band);
     }
   }
   return rows;
@@ -53,15 +57,16 @@ export function renderReportHtml(report: ExplorationReport): string {
   const badgeText = report.reachedSummary ? 'Reached summary' : 'Did not reach summary';
 
   let stepsHtml = '';
-  for (const step of report.steps) {
+  report.steps.forEach((step, index) => {
+    const band = index % 2 === 0 ? 'band-a' : 'band-b';
     const outcomeClass = step.outcome === 'failed' ? 'outcome-failed' : step.outcome === 'recovered' ? 'outcome-recovered' : '';
     const stepMark = step.outcome === 'failed' ? '<span class="mark cross">✗</span>' : '<span class="mark tick">✓</span>';
-    stepsHtml += `<tr class="step-row"><td class="status">${stepMark}</td><td colspan="3">Step ${step.stepIndex}
+    stepsHtml += `<tr class="step-row ${band}"><td class="status">${stepMark}</td><td colspan="3">Step ${step.stepIndex}
       <span class="${outcomeClass}">${esc(step.outcome)}</span>
       ${step.error ? `<div class="value failed" style="margin-top:4px;font-weight:normal;">${esc(stripAnsi(step.error))}</div>` : ''}
     </td></tr>`;
-    stepsHtml += fieldRows(step.fields, 0);
-  }
+    stepsHtml += fieldRows(step.fields, 0, band);
+  });
 
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>${esc(report.form)} exploration</title>
@@ -87,6 +92,9 @@ export function renderReportHtml(report: ExplorationReport): string {
   .mark.tick { color: #6fbf94; }
   .mark.cross { color: #e0795f; }
   .mark.dash { color: #a9a394; }
+  .band-a { background: #1c1b14; }
+  .band-b { background: #17160f; }
+  .step-row.band-a, .step-row.band-b { background: #221f16; }
 </style></head>
 <body>
   <h1>${esc(report.form)}</h1>

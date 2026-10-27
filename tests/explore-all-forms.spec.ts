@@ -38,11 +38,7 @@ test('explores every referral form currently offered by this environment', async
 
   for (const form of forms) {
     console.log(`\n=== Exploring "${form.title}" (${form.url}) ===`);
-    // the top level of the trace's step grouping - everything this
-    // form does (its own steps, each step's own fields) nests under
-    // one named, collapsible entry instead of running together with
-    // every other form's actions in one flat list
-    const { report } = await test.step(form.title, () => exploreFormAtUrl(page, form.title, form.url));
+    const { report } = await exploreFormAtUrl(page, form.title, form.url);
     runs.push({ title: form.title, report });
 
     // back to a clean dashboard before opening the next form - the
