@@ -26,9 +26,14 @@ export class NewReferralModal {
   // this environment later is picked up automatically on the next run.
   // the tiles themselves have no accessible role to select by (confirmed
   // from a real run: a role-based selector only matched the close
-  // controls), but each tile's title is reliably followed by its own
-  // "Please use this form for a ... referral" description line, so pairs
-  // of consecutive lines matching that shape identify a real tile
+  // controls). most tiles' titles are followed by their own "Please use
+  // this form for a ... referral" description line, but that's not
+  // guaranteed - a real tile ("RBC Care at Home Referral Draft
+  // Template") has no description line at all, straight into "Close",
+  // and pairing on that assumption silently dropped it. filtering out
+  // the known non-title lines (the header, the icons, any description
+  // line) instead of requiring a description's presence handles both
+  // shapes
   async listServiceTypes(): Promise<string[]> {
     const raw = await this.root.innerText();
     const lines = raw
@@ -36,13 +41,8 @@ export class NewReferralModal {
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-    const types: string[] = [];
-    for (let i = 0; i < lines.length - 1; i += 1) {
-      if (/^please use this form for/i.test(lines[i + 1])) {
-        types.push(lines[i]);
-      }
-    }
-    return types;
+    const nonTitleLines = new Set(['New referral', '×', 'Close']);
+    return lines.filter((line) => !nonTitleLines.has(line) && !/^please use this form for/i.test(line));
   }
 
   async close(): Promise<void> {
