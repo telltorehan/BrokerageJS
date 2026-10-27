@@ -47,12 +47,13 @@ export interface ExplorationReport {
 // by default means a genuinely wrong-element bug still fails loudly
 async function checkWithFallback(locator: Locator): Promise<void> {
   // seen live, repeatedly: the first click on one specific radio group
-  // fails regardless of which option is picked (confirmed across five
-  // runs - a different option failed each time), even forced, but an
-  // attempt made several seconds later always succeeds. a single extra
-  // 500ms retry wasn't enough margin to resolve it, so keep retrying
-  // normally for several seconds - whatever this needs time for, give
-  // it the time - before reaching for force as the last resort
+  // fails regardless of which option is picked (confirmed across six
+  // runs - a different option failed each time), even forced. patient
+  // retrying (up to 5s) didn't resolve it either, which argues against
+  // this being a plain "not ready yet" timing race and toward something
+  // that needs a specific trigger elsewhere on the page, not just
+  // elapsed time - still worth a short patient window in case it is
+  // partly timing-related
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
     try {
@@ -62,6 +63,20 @@ async function checkWithFallback(locator: Locator): Promise<void> {
       // try again
     }
   }
+
+  // a native JS click doesn't go through Playwright's simulated mouse
+  // event at all, so it can register with a widget whose own event
+  // listeners behave differently under a real vs. simulated click -
+  // worth trying as a genuinely different mechanism before forcing
+  try {
+    await locator.evaluate((el) => (el as HTMLInputElement).click());
+    if (await locator.isChecked()) {
+      return;
+    }
+  } catch {
+    // fall through to the forced click below
+  }
+
   await locator.check({ force: true });
 }
 
