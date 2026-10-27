@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { DashboardPage } from '../src/pages/DashboardPage';
+import { ExplorationReport } from '../src/components/FormExplorer';
 import { exploreFormAtUrl, loginAndGoToDashboard } from './support/exploreForm';
+import { renderSummaryHtml } from './support/renderReportHtml';
 
 const email = process.env.BROKERAGE_EMAIL ?? '';
 const password = process.env.BROKERAGE_PASSWORD ?? '';
@@ -32,12 +34,12 @@ test('explores every referral form currently offered by this environment', async
   console.log(`Discovered ${forms.length} referral form(s): ${forms.map((f) => f.title).join(', ')}`);
   expect(forms.length, 'No referral forms were discovered in the "start a new referral" modal').toBeGreaterThan(0);
 
-  const results: { form: string; reachedSummary: boolean }[] = [];
+  const runs: { title: string; report: ExplorationReport }[] = [];
 
   for (const form of forms) {
     console.log(`\n=== Exploring "${form.title}" (${form.url}) ===`);
     const { report } = await exploreFormAtUrl(page, form.title, form.url);
-    results.push({ form: form.title, reachedSummary: report.reachedSummary });
+    runs.push({ title: form.title, report });
 
     // back to a clean dashboard before opening the next form - the
     // engine never submits, so there's nothing to undo, just navigate
@@ -45,11 +47,18 @@ test('explores every referral form currently offered by this environment', async
   }
 
   console.log('\n=== Summary ===');
-  for (const result of results) {
-    console.log(`  ${result.reachedSummary ? 'OK' : 'FAILED'} - ${result.form}`);
+  for (const run of runs) {
+    console.log(`  ${run.report.reachedSummary ? 'OK' : 'FAILED'} - ${run.title}`);
   }
 
-  for (const result of results) {
-    expect.soft(result.reachedSummary, `${result.form} did not reach Summary`).toBe(true);
+  // one structured, tick/cross overview of the whole run, instead of
+  // piecing it together from the console log and a separate flat
+  // attachment per form - each form's own attachment was already added
+  // as it finished, so this one lands last in the list, but it's the
+  // only one you actually need to open first to see what passed
+  await test.info().attach('exploration-summary.html', { body: renderSummaryHtml(runs), contentType: 'text/html' });
+
+  for (const run of runs) {
+    expect.soft(run.report.reachedSummary, `${run.title} did not reach Summary`).toBe(true);
   }
 });
