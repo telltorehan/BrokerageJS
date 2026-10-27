@@ -1,13 +1,29 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Page } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import { DashboardPage } from '../../src/pages/DashboardPage';
 import { LoginPage } from '../../src/pages/LoginPage';
-import { ExplorationReport, FormExplorer } from '../../src/components/FormExplorer';
+import { ExplorationReport, FilledField, FormExplorer } from '../../src/components/FormExplorer';
+import { renderReportHtml } from './renderReportHtml';
 
 export interface ExplorationRun {
   report: ExplorationReport;
   file: string;
+}
+
+// walks every field (including ones revealed by an earlier answer) and
+// soft-fails each one that didn't actually fill - soft because one bad
+// field shouldn't stop the others from being checked and reported in the
+// same run, the way a hard assert would
+function checkFields(fields: FilledField[], stepIndex: number): void {
+  for (const field of fields) {
+    if (field.kind !== 'unknown' && field.value.startsWith('<failed:')) {
+      expect.soft(field.value, `Step ${stepIndex}: "${field.label}" failed to fill`).not.toMatch(/^<failed:/);
+    }
+    if (field.revealed.length) {
+      checkFields(field.revealed, stepIndex);
+    }
+  }
 }
 
 // shared by every explore-*.spec.ts: logs in, opens the named referral
@@ -42,6 +58,21 @@ export async function exploreReferralForm(page: Page, serviceType: string): Prom
   console.log(
     `Reached summary: ${report.reachedSummary} | steps: ${report.summary.totalSteps} | fields: ${report.summary.totalFields}`,
   );
+
+  // attach the full report to this test's result so it's visible straight
+  // from `npx playwright show-report`, not just a side file nobody opens
+  await test.info().attach('exploration-report.json', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
+  await test.info().attach('exploration-report.html', { body: renderReportHtml(report), contentType: 'text/html' });
+
+  // surface every field that failed to fill as its own named failure in
+  // Playwright's own report, instead of something only visible by
+  // opening a separate JSON file and reading closely
+  for (const step of report.steps) {
+    checkFields(step.fields, step.stepIndex);
+    if (step.outcome === 'failed' && step.error) {
+      expect.soft(step.error, `Step ${step.stepIndex} could not advance`).toBe('');
+    }
+  }
 
   return { report, file };
 }
