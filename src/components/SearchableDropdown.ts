@@ -77,7 +77,12 @@ export class SearchableDropdown {
     await optionLocator
       .filter({ hasText: new RegExp(`^${escapeForRegExp(picked)}$`) })
       .first()
-      .click({ timeout: 5000 });
+      // a toast notification has been seen covering an option for several
+      // seconds (confirmed on the same field across two separate runs) -
+      // the click was already retrying and nearly cleared it within 5s,
+      // so a longer timeout should let it clear reliably instead of
+      // narrowly missing the window
+      .click({ timeout: 10000 });
     await this.page.keyboard.press('Escape');
     return picked;
   }
@@ -127,7 +132,7 @@ export class SearchableDropdown {
       .locator('a[role="option"]:visible')
       .filter({ hasText: new RegExp(`^${escapeForRegExp(optionText)}$`) })
       .first()
-      .click({ timeout: 5000 });
+      .click({ timeout: 10000 });
     // the open menu sits on top of whatever field comes next, close it
     // explicitly rather than relying on the click having done that
     await this.page.keyboard.press('Escape');
