@@ -30,5 +30,13 @@ test('lists every referral type offered by the new-referral modal', async ({ pag
   console.log('Modal text:');
   console.log(raw);
 
+  // the text-only view doesn't say what actually marks a tile as a tile
+  // (a class, a data attribute, a consistent wrapper) - the raw markup
+  // is what a real, structure-based selector would need instead of
+  // parsing rendered text, which breaks every time wording changes
+  const html = await page.locator('#generalModal').innerHTML();
+  console.log('\nModal HTML:');
+  console.log(html);
+
   await expect(page.locator('#generalModal')).toBeVisible();
 });
