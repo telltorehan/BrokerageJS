@@ -5,30 +5,47 @@ function escapeForRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+async function hideBlockingToasts(page: Page): Promise<void> {
+  // a real dashboard dump showed THREE separate elements with
+  // id="global_toast" at once - this app creates a new one (likely per
+  // autosave cycle) rather than reusing one, so document.getElementById
+  // only ever hides whichever one happens to be first in the DOM, which
+  // may not be the one actually covering the click. querySelectorAll
+  // catches all of them regardless of how many exist at once
+  await page.evaluate(() => {
+    document.querySelectorAll('#global_toast, .toast').forEach((el) => {
+      (el as HTMLElement).style.display = 'none';
+    });
+  });
+}
+
 async function clickOptionPastToast(page: Page, option: Locator, timeout: number): Promise<void> {
   try {
     await option.click({ timeout });
+    return;
   } catch {
-    // a notification toast has been seen sitting on screen long enough
-    // to outlast even a 10s wait (confirmed on a real run) - we aren't
-    // testing the toast, so rather than waiting indefinitely for
-    // something that might not disappear in any fixed time, clear it
-    // directly and retry once. checking whether the toast is STILL
-    // visible right at this instant before deciding to retry was a real
-    // bug: a toast that disappears in the exact same moment the click
-    // times out looks like "not blocking anymore" at the check, so the
-    // retry never happened even though it would have succeeded right
-    // then - hide it unconditionally (a no-op if it's already gone) and
-    // always retry once, rather than gating the retry on a visibility
-    // check that can miss by a matter of milliseconds
-    await page.evaluate(() => {
-      const toast = document.getElementById('global_toast');
-      if (toast) {
-        toast.style.display = 'none';
-      }
-    });
-    await option.click({ timeout: 5000 });
+    // fall through to the retry loop below
   }
+
+  // a single hide-and-retry wasn't enough on a real run - the retry
+  // itself timed out too, which fits a toast reappearing right after
+  // being hidden (the app seems to fire autosave toasts repeatedly in
+  // quick succession) rather than there being just one to clear. keep
+  // hiding and retrying for a few seconds instead of giving up after
+  // one attempt - we aren't testing the toast, so clearing it as many
+  // times as it takes is fine
+  const deadline = Date.now() + 8000;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    await hideBlockingToasts(page);
+    try {
+      await option.click({ timeout: 1500 });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 /**
