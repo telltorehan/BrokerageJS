@@ -87,7 +87,7 @@
     text-transform: uppercase;
     color: var(--fg-muted);
   }
-  .value.failed { color: var(--bad); background: var(--bad-bg); padding: 2px 6px; border-radius: 4px; }
+  .value.failed { color: var(--bad); background: var(--bad-bg); padding: 2px 6px; border-radius: 4px; white-space: pre-wrap; }
   .value.empty { color: var(--fg-muted); font-style: italic; }
   .revealed { color: var(--fg-muted); font-size: 0.78rem; }
   .outcome-failed { color: var(--bad); font-weight: 600; }
@@ -125,6 +125,10 @@ function loadFiles(fileList) {
     reader.onload = () => {
       try {
         const report = JSON.parse(reader.result);
+        if (!report || !Array.isArray(report.steps) || typeof report.reachedSummary !== 'boolean') {
+          renderUnrecognized(file.name);
+          return;
+        }
         renderReport(report, file.name);
       } catch (err) {
         alert(`Could not parse ${file.name}: ${err.message}`);
@@ -134,10 +138,30 @@ function loadFiles(fileList) {
   });
 }
 
+function renderUnrecognized(filename) {
+  const el = document.createElement('div');
+  el.className = 'report';
+  el.innerHTML = `
+    <div class="report-head">
+      <h2>${esc(filename)}</h2>
+      <span class="badge bad">Not an exploration report</span>
+      <span class="meta">This file doesn't have the shape FormExplorer writes - probably a Playwright internal file (e.g. .last-run.json) picked up by mistake, not one from exploration-reports/.</span>
+    </div>
+  `;
+  reportsEl.prepend(el);
+}
+
 function esc(text) {
   const div = document.createElement('div');
   div.textContent = text ?? '';
   return div.innerHTML;
+}
+
+// Playwright's own error messages carry terminal color codes (ANSI
+// escape sequences) meant for a console, not a browser - left in, they
+// render as literal boxes/garbage characters instead of being invisible
+function stripAnsi(text) {
+  return text.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
 function fieldRows(fields, depth) {
@@ -150,7 +174,7 @@ function fieldRows(fields, depth) {
     const isFailed = typeof field.value === 'string' && field.value.startsWith('<failed:');
     const isEmpty = field.value === '' || field.value == null;
     const valueClass = isFailed ? 'value failed' : isEmpty ? 'value empty' : 'value';
-    const valueText = isFailed ? field.value : isEmpty ? '(empty)' : field.value;
+    const valueText = isFailed ? stripAnsi(field.value) : isEmpty ? '(empty)' : field.value;
     rows += `<tr>
       <td>${'—'.repeat(depth)} ${esc(field.label)}${field.optional ? ' <span class="meta">(optional)</span>' : ''}</td>
       <td class="kind">${esc(field.kind)}</td>
@@ -172,7 +196,7 @@ function renderReport(report, filename) {
     const outcomeClass = step.outcome === 'failed' ? 'outcome-failed' : step.outcome === 'recovered' ? 'outcome-recovered' : '';
     stepsHtml += `<tr class="step-row"><td colspan="3">Step ${step.stepIndex}
       <span class="${outcomeClass}">${esc(step.outcome)}</span>
-      ${step.error ? `<div class="value failed" style="margin-top:4px;font-weight:normal;">${esc(step.error)}</div>` : ''}
+      ${step.error ? `<div class="value failed" style="margin-top:4px;font-weight:normal;">${esc(stripAnsi(step.error))}</div>` : ''}
     </td></tr>`;
     stepsHtml += fieldRows(step.fields || [], 0);
   }
