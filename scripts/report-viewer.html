@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exploration Report Viewer</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --border: #e0ddd6;
+    --fg: #1f1d1a;
+    --fg-muted: #6b6558;
+    --accent: #2f6f4f;
+    --bad: #b3432b;
+    --bad-bg: #fbeae6;
+    --ok-bg: #eaf3ec;
+    --warn-bg: #fdf3e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17160f;
+      --panel: #211f18;
+      --border: #3a372c;
+      --fg: #f1efe9;
+      --fg-muted: #a9a394;
+      --accent: #6fbf94;
+      --bad: #e0795f;
+      --bad-bg: #3a2420;
+      --ok-bg: #203023;
+      --warn-bg: #352c1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    padding: 24px 16px 60px;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .sub { color: var(--fg-muted); margin: 0 0 20px; font-size: 0.9rem; }
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    color: var(--fg-muted);
+    max-width: 900px;
+    margin: 0 auto 28px;
+    background: var(--panel);
+  }
+  .dropzone.drag { border-color: var(--accent); color: var(--accent); }
+  .dropzone input { margin-top: 10px; }
+  .wrap { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .report {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .report-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .report-head h2 { margin: 0; font-size: 1.05rem; flex: 1; min-width: 0; }
+  .badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 100px;
+  }
+  .badge.ok { background: var(--ok-bg); color: var(--accent); }
+  .badge.bad { background: var(--bad-bg); color: var(--bad); }
+  .meta { color: var(--fg-muted); font-size: 0.82rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  th, td { text-align: left; padding: 7px 18px; vertical-align: top; }
+  th { color: var(--fg-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  tbody tr:nth-child(odd) { background: color-mix(in srgb, var(--border) 25%, transparent); }
+  .step-row td { padding-top: 14px; font-weight: 600; color: var(--accent); border-top: 1px solid var(--border); }
+  .kind {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .value.failed { color: var(--bad); background: var(--bad-bg); padding: 2px 6px; border-radius: 4px; }
+  .value.empty { color: var(--fg-muted); font-style: italic; }
+  .revealed { color: var(--fg-muted); font-size: 0.78rem; }
+  .outcome-failed { color: var(--bad); font-weight: 600; }
+  .outcome-recovered { color: #b58900; font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>Exploration Report Viewer</h1>
+  <p class="sub">Drag in one or more exploration-reports/*.json files, or pick them below. Nothing leaves your browser.</p>
+
+  <div class="dropzone" id="dropzone">
+    Drop report files here
+    <div><input type="file" id="fileInput" accept="application/json" multiple></div>
+  </div>
+
+  <div class="wrap" id="reports"></div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const reportsEl = document.getElementById('reports');
+
+['dragenter', 'dragover'].forEach((evt) =>
+  dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('drag'); })
+);
+['dragleave', 'drop'].forEach((evt) =>
+  dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove('drag'); })
+);
+dropzone.addEventListener('drop', (e) => loadFiles(e.dataTransfer.files));
+fileInput.addEventListener('change', (e) => loadFiles(e.target.files));
+
+function loadFiles(fileList) {
+  Array.from(fileList).forEach((file) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const report = JSON.parse(reader.result);
+        renderReport(report, file.name);
+      } catch (err) {
+        alert(`Could not parse ${file.name}: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+function esc(text) {
+  const div = document.createElement('div');
+  div.textContent = text ?? '';
+  return div.innerHTML;
+}
+
+function fieldRows(fields, depth) {
+  let rows = '';
+  for (const field of fields) {
+    if (field.kind === 'unknown') {
+      rows += `<tr><td colspan="4" class="revealed">${'—'.repeat(depth)} ${esc(field.label)}</td></tr>`;
+      continue;
+    }
+    const isFailed = typeof field.value === 'string' && field.value.startsWith('<failed:');
+    const isEmpty = field.value === '' || field.value == null;
+    const valueClass = isFailed ? 'value failed' : isEmpty ? 'value empty' : 'value';
+    const valueText = isFailed ? field.value : isEmpty ? '(empty)' : field.value;
+    rows += `<tr>
+      <td>${'—'.repeat(depth)} ${esc(field.label)}${field.optional ? ' <span class="meta">(optional)</span>' : ''}</td>
+      <td class="kind">${esc(field.kind)}</td>
+      <td class="${valueClass}">${esc(String(valueText))}</td>
+    </tr>`;
+    if (field.revealed && field.revealed.length) {
+      rows += fieldRows(field.revealed, depth + 1);
+    }
+  }
+  return rows;
+}
+
+function renderReport(report, filename) {
+  const badgeClass = report.reachedSummary ? 'ok' : 'bad';
+  const badgeText = report.reachedSummary ? 'Reached summary' : 'Did not reach summary';
+
+  let stepsHtml = '';
+  for (const step of report.steps || []) {
+    const outcomeClass = step.outcome === 'failed' ? 'outcome-failed' : step.outcome === 'recovered' ? 'outcome-recovered' : '';
+    stepsHtml += `<tr class="step-row"><td colspan="3">Step ${step.stepIndex}
+      <span class="${outcomeClass}">${esc(step.outcome)}</span>
+      ${step.error ? `<div class="value failed" style="margin-top:4px;font-weight:normal;">${esc(step.error)}</div>` : ''}
+    </td></tr>`;
+    stepsHtml += fieldRows(step.fields || [], 0);
+  }
+
+  const el = document.createElement('div');
+  el.className = 'report';
+  el.innerHTML = `
+    <div class="report-head">
+      <h2>${esc(report.form || filename)}</h2>
+      <span class="badge ${badgeClass}">${badgeText}</span>
+      <span class="meta">${esc(filename)}</span>
+      <span class="meta">${report.summary ? `${report.summary.totalSteps} steps · ${report.summary.totalFields} fields` : ''}</span>
+    </div>
+    <table>
+      <thead><tr><th>Field</th><th>Kind</th><th>Value</th></tr></thead>
+      <tbody>${stepsHtml}</tbody>
+    </table>
+  `;
+  reportsEl.prepend(el);
+}
+</script>
+</body>
+</html>
