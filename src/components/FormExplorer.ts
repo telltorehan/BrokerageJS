@@ -2,7 +2,7 @@
 // elsewhere) - the GB locale gives names, addresses and counties that
 // actually look UK-shaped instead of faker's US-flavoured defaults
 import { fakerEN_GB as faker } from '@faker-js/faker';
-import { Locator, Page } from '@playwright/test';
+import { Locator, Page, test } from '@playwright/test';
 import { RichTextEditor } from './RichTextEditor';
 import { SearchableDropdown } from './SearchableDropdown';
 import { WizardNavigation } from './WizardNavigation';
@@ -213,7 +213,12 @@ export class FormExplorer {
         break;
       }
 
-      const stepReport = await this.exploreStep(stepIndex);
+      // test.step() groups everything inside it into one named,
+      // collapsible entry in Playwright's own trace - without it, a
+      // single step's worth of field scans and fills reads as one flat
+      // list of dozens of raw locator actions with nothing showing
+      // which ones belong together
+      const stepReport = await test.step(`Step ${stepIndex}`, () => this.exploreStep(stepIndex));
       report.steps.push(stepReport);
       this.tallyInto(report.summary, stepReport.fields);
 
@@ -300,7 +305,7 @@ export class FormExplorer {
     if (!present) {
       return null;
     }
-    return this.fillGroup(group, label);
+    return test.step(label, () => this.fillGroup(group, label));
   }
 
   // repeatedly scans the step for not-yet-handled visible groups and
@@ -324,7 +329,7 @@ export class FormExplorer {
         handled.add(label);
         foundNew = true;
 
-        const filled = await this.fillGroup(group, label);
+        const filled = await test.step(label, () => this.fillGroup(group, label));
         if (filled) {
           results.push(filled);
         }
