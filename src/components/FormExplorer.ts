@@ -46,26 +46,23 @@ export interface ExplorationReport {
 // resolves to correctly but can't act on without force. not using force
 // by default means a genuinely wrong-element bug still fails loudly
 async function checkWithFallback(locator: Locator): Promise<void> {
-  try {
-    await locator.check({ timeout: 4000 });
-    return;
-  } catch {
-    // fall through to the retry below
+  // seen live, repeatedly: the first click on one specific radio group
+  // fails regardless of which option is picked (confirmed across five
+  // runs - a different option failed each time), even forced, but an
+  // attempt made several seconds later always succeeds. a single extra
+  // 500ms retry wasn't enough margin to resolve it, so keep retrying
+  // normally for several seconds - whatever this needs time for, give
+  // it the time - before reaching for force as the last resort
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    try {
+      await locator.check({ timeout: 1000 });
+      return;
+    } catch {
+      // try again
+    }
   }
-
-  // seen live on a freshly-revealed radio group: the very first click
-  // attempt failed regardless of which option was picked (confirmed
-  // across runs - different options failed each time), even under a
-  // forced click, but a later attempt on a different option succeeded.
-  // that pattern points to the widget not being fully interactive the
-  // instant it becomes visible, not to force being the wrong tool - so
-  // wait a beat and retry normally before reaching for force at all
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  try {
-    await locator.check({ timeout: 4000 });
-  } catch {
-    await locator.check({ force: true });
-  }
+  await locator.check({ force: true });
 }
 
 // faker's lorem module is deliberately nonsense placeholder text in any
