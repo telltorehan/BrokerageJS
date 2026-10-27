@@ -5,6 +5,29 @@ function escapeForRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+async function clickOptionPastToast(page: Page, option: Locator, timeout: number): Promise<void> {
+  try {
+    await option.click({ timeout });
+  } catch (error) {
+    // a notification toast has been seen sitting on screen long enough
+    // to outlast even a 10s wait (confirmed on a real run) - we aren't
+    // testing the toast, so rather than waiting indefinitely for
+    // something that might not disappear in any fixed time, clear it
+    // directly and retry once
+    const toastStillBlocking = await page.locator('#global_toast').isVisible().catch(() => false);
+    if (!toastStillBlocking) {
+      throw error;
+    }
+    await page.evaluate(() => {
+      const toast = document.getElementById('global_toast');
+      if (toast) {
+        toast.style.display = 'none';
+      }
+    });
+    await option.click({ timeout: 5000 });
+  }
+}
+
 /**
  * Driver for the bootstrap-select widgets used throughout the wizard.
  * Option ids (#bs-select-9-3 etc) shift depending on how many items are in
@@ -74,15 +97,8 @@ export class SearchableDropdown {
     }
 
     const picked = faker.helpers.arrayElement(real);
-    await optionLocator
-      .filter({ hasText: new RegExp(`^${escapeForRegExp(picked)}$`) })
-      .first()
-      // a toast notification has been seen covering an option for several
-      // seconds (confirmed on the same field across two separate runs) -
-      // the click was already retrying and nearly cleared it within 5s,
-      // so a longer timeout should let it clear reliably instead of
-      // narrowly missing the window
-      .click({ timeout: 10000 });
+    const option = optionLocator.filter({ hasText: new RegExp(`^${escapeForRegExp(picked)}$`) }).first();
+    await clickOptionPastToast(this.page, option, 10000);
     await this.page.keyboard.press('Escape');
     return picked;
   }
@@ -128,11 +144,11 @@ export class SearchableDropdown {
     // some dropdowns in this app genuinely have two options with identical
     // text (e.g. the "Care Home" list has "Test" listed twice) - take the
     // first match deterministically instead of a strict-mode violation
-    await this.page
+    const option = this.page
       .locator('a[role="option"]:visible')
       .filter({ hasText: new RegExp(`^${escapeForRegExp(optionText)}$`) })
-      .first()
-      .click({ timeout: 10000 });
+      .first();
+    await clickOptionPastToast(this.page, option, 10000);
     // the open menu sits on top of whatever field comes next, close it
     // explicitly rather than relying on the click having done that
     await this.page.keyboard.press('Escape');
