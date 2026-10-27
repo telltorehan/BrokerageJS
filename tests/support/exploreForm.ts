@@ -38,23 +38,16 @@ export async function loginAndGoToDashboard(page: Page): Promise<void> {
   await dashboard.waitForLoaded();
 }
 
-// assumes the page is already logged in and on the dashboard - opens the
-// named referral type from the "start a new referral" modal and runs it
-// through the generic engine. kept separate from exploreReferralForm so
-// an audit of several forms in one run can reuse a single login instead
-// of logging in again for each one
-export async function exploreOpenForm(page: Page, serviceType: string): Promise<ExplorationRun> {
-  const dashboard = new DashboardPage(page);
-  const modal = await dashboard.startNewReferral();
-  await modal.choose(serviceType);
-  await page.waitForURL(/\/forms\/\d+/);
-
+// shared by both ways of opening a form (clicking a tile, or navigating
+// straight to its URL) - runs it through the generic engine, writes and
+// attaches the report, and soft-fails every field that didn't fill
+async function runExploration(page: Page, formLabel: string): Promise<ExplorationRun> {
   const explorer = new FormExplorer(page);
-  const report = await explorer.run(serviceType);
+  const report = await explorer.run(formLabel);
 
   const dir = path.join(process.cwd(), 'exploration-reports');
   fs.mkdirSync(dir, { recursive: true });
-  const slug = serviceType.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const slug = formLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const file = path.join(dir, `${slug}-${Date.now()}.json`);
   fs.writeFileSync(file, JSON.stringify(report, null, 2));
   console.log(`Exploration report written to ${file}`);
@@ -73,13 +66,36 @@ export async function exploreOpenForm(page: Page, serviceType: string): Promise<
   // Playwright's own report, instead of something only visible by
   // opening a separate JSON file and reading closely
   for (const step of report.steps) {
-    checkFields(step.fields, step.stepIndex, serviceType);
+    checkFields(step.fields, step.stepIndex, formLabel);
     if (step.outcome === 'failed' && step.error) {
-      expect.soft(step.error, `${serviceType} / Step ${step.stepIndex} could not advance`).toBe('');
+      expect.soft(step.error, `${formLabel} / Step ${step.stepIndex} could not advance`).toBe('');
     }
   }
 
   return { report, file };
+}
+
+// assumes the page is already logged in and on the dashboard - opens the
+// named referral type from the "start a new referral" modal and runs it
+// through the generic engine. kept separate from exploreReferralForm so
+// an audit of several forms in one run can reuse a single login instead
+// of logging in again for each one
+export async function exploreOpenForm(page: Page, serviceType: string): Promise<ExplorationRun> {
+  const dashboard = new DashboardPage(page);
+  const modal = await dashboard.startNewReferral();
+  await modal.choose(serviceType);
+  await page.waitForURL(/\/forms\/\d+/);
+  return runExploration(page, serviceType);
+}
+
+// opens a form by navigating straight to its own URL instead of finding
+// and clicking the right tile by its label - used by the dynamic
+// multi-form audit, which already has each form's real data-url from
+// the modal's markup and so doesn't need to match it by text at all
+export async function exploreFormAtUrl(page: Page, title: string, url: string): Promise<ExplorationRun> {
+  await page.goto(url);
+  await page.waitForURL(/\/forms\/\d+/);
+  return runExploration(page, title);
 }
 
 // shared by every single-form explore-*.spec.ts: logs in, opens the

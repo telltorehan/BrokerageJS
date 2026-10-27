@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { DashboardPage } from '../src/pages/DashboardPage';
-import { exploreOpenForm, loginAndGoToDashboard } from './support/exploreForm';
+import { exploreFormAtUrl, loginAndGoToDashboard } from './support/exploreForm';
 
 const email = process.env.BROKERAGE_EMAIL ?? '';
 const password = process.env.BROKERAGE_PASSWORD ?? '';
@@ -11,10 +11,11 @@ test.beforeEach(() => {
 });
 
 // doesn't hardcode which forms exist. it reads whatever the "start a
-// new referral" modal currently offers and explores every one of them
-// in sequence, so a form added to this environment at any point - today,
-// next week, whenever - needs no new test file: the next run picks it
-// up automatically
+// new referral" modal currently offers (title and URL, straight from
+// the modal's own markup) and explores every one of them in sequence,
+// so a form added to this environment at any point - today, next week,
+// whenever - needs no new test file: the next run picks it up
+// automatically
 test('explores every referral form currently offered by this environment', async ({ page }) => {
   // a run that walks every form in the environment back-to-back needs a
   // much larger budget than any single form - this scales with however
@@ -25,18 +26,18 @@ test('explores every referral form currently offered by this environment', async
 
   const dashboard = new DashboardPage(page);
   const modal = await dashboard.startNewReferral();
-  const formNames = await modal.listServiceTypes();
+  const forms = await modal.listForms();
   await modal.close();
 
-  console.log(`Discovered ${formNames.length} referral form(s): ${formNames.join(', ')}`);
-  expect(formNames.length, 'No referral forms were discovered in the "start a new referral" modal').toBeGreaterThan(0);
+  console.log(`Discovered ${forms.length} referral form(s): ${forms.map((f) => f.title).join(', ')}`);
+  expect(forms.length, 'No referral forms were discovered in the "start a new referral" modal').toBeGreaterThan(0);
 
   const results: { form: string; reachedSummary: boolean }[] = [];
 
-  for (const formName of formNames) {
-    console.log(`\n=== Exploring "${formName}" ===`);
-    const { report } = await exploreOpenForm(page, formName);
-    results.push({ form: formName, reachedSummary: report.reachedSummary });
+  for (const form of forms) {
+    console.log(`\n=== Exploring "${form.title}" (${form.url}) ===`);
+    const { report } = await exploreFormAtUrl(page, form.title, form.url);
+    results.push({ form: form.title, reachedSummary: report.reachedSummary });
 
     // back to a clean dashboard before opening the next form - the
     // engine never submits, so there's nothing to undo, just navigate

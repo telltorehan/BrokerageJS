@@ -21,28 +21,26 @@ export class NewReferralModal {
     await expect(this.root).toBeHidden();
   }
 
-  // every referral type currently offered, read straight from the
-  // modal's own text rather than a hardcoded list - so a form added to
-  // this environment later is picked up automatically on the next run.
-  // the tiles themselves have no accessible role to select by (confirmed
-  // from a real run: a role-based selector only matched the close
-  // controls). most tiles' titles are followed by their own "Please use
-  // this form for a ... referral" description line, but that's not
-  // guaranteed - a real tile ("RBC Care at Home Referral Draft
-  // Template") has no description line at all, straight into "Close",
-  // and pairing on that assumption silently dropped it. filtering out
-  // the known non-title lines (the header, the icons, any description
-  // line) instead of requiring a description's presence handles both
-  // shapes
-  async listServiceTypes(): Promise<string[]> {
-    const raw = await this.root.innerText();
-    const lines = raw
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-
-    const nonTitleLines = new Set(['New referral', '×', 'Close']);
-    return lines.filter((line) => !nonTitleLines.has(line) && !/^please use this form for/i.test(line));
+  // every referral type currently offered, with the form's own URL - read
+  // from the modal's real markup instead of its rendered text. each tile
+  // is a .brokerage-block[data-url] element (confirmed from the modal's
+  // actual HTML); the title is .brokerage-block-inner's own text with
+  // its nested .small description removed. this is immune to wording
+  // changes entirely, unlike the earlier text-parsing approach, which
+  // broke once already on a tile with no description line and would
+  // break again on one with differently-worded text. the data-url also
+  // means a form can be opened by navigating straight to it, without
+  // needing to find and click the right tile by its label at all
+  async listForms(): Promise<{ title: string; url: string }[]> {
+    return this.root.locator('.brokerage-block[data-url]').evaluateAll((blocks) =>
+      blocks.map((block) => {
+        const url = block.getAttribute('data-url') ?? '';
+        const inner = block.querySelector('.brokerage-block-inner');
+        const clone = inner?.cloneNode(true) as HTMLElement | undefined;
+        clone?.querySelectorAll('.small').forEach((el) => el.remove());
+        return { title: (clone?.textContent ?? '').trim(), url };
+      }),
+    );
   }
 
   async close(): Promise<void> {
