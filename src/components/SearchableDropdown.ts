@@ -8,16 +8,19 @@ function escapeForRegExp(text: string): string {
 async function clickOptionPastToast(page: Page, option: Locator, timeout: number): Promise<void> {
   try {
     await option.click({ timeout });
-  } catch (error) {
+  } catch {
     // a notification toast has been seen sitting on screen long enough
     // to outlast even a 10s wait (confirmed on a real run) - we aren't
     // testing the toast, so rather than waiting indefinitely for
     // something that might not disappear in any fixed time, clear it
-    // directly and retry once
-    const toastStillBlocking = await page.locator('#global_toast').isVisible().catch(() => false);
-    if (!toastStillBlocking) {
-      throw error;
-    }
+    // directly and retry once. checking whether the toast is STILL
+    // visible right at this instant before deciding to retry was a real
+    // bug: a toast that disappears in the exact same moment the click
+    // times out looks like "not blocking anymore" at the check, so the
+    // retry never happened even though it would have succeeded right
+    // then - hide it unconditionally (a no-op if it's already gone) and
+    // always retry once, rather than gating the retry on a visibility
+    // check that can miss by a matter of milliseconds
     await page.evaluate(() => {
       const toast = document.getElementById('global_toast');
       if (toast) {
