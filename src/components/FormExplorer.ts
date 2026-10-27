@@ -237,51 +237,70 @@ export class FormExplorer {
 
   // fills every field currently visible on this step (recursing into
   // anything a fill reveals), then tries to advance. if the app blocks
-  // Next naming fields we haven't filled, attempts one recovery pass
-  // scoped to exactly those names before giving up on this step
+  // Next naming fields we haven't filled, fills exactly those and tries
+  // again - in a bounded loop, not just once. confirmed live: filling a
+  // recovered field can itself reveal further required fields (filling
+  // "Support required" with "Medication" revealed "Medication support",
+  // which itself revealed a details box) - a single recovery round
+  // found and filled the first reveal but had no way to notice the
+  // second, so the step died there even though the engine could have
+  // kept going. each round only acts on missing fields it hasn't
+  // already tried, so a field that's genuinely stuck still fails loudly
+  // instead of looping forever
   private async exploreStep(stepIndex: number): Promise<StepReport> {
-    const fields = await this.fillVisibleFields(new Set());
+    const handled = new Set<string>();
+    const fields = await this.fillVisibleFields(handled);
+    const recoveredAll: string[] = [];
 
-    try {
-      await this.navigation.next();
-      return { stepIndex, url: this.page.url(), fields, outcome: 'advanced', recoveredFields: [] };
-    } catch (error) {
-      const missing = this.parseMissingFields(error);
-      const recovered: string[] = [];
-
-      for (const label of missing) {
-        const filled = await this.fillByLabel(label);
-        if (filled) {
-          fields.push(filled);
-          recovered.push(label);
-        }
-      }
-
-      if (recovered.length === 0) {
-        return {
-          stepIndex,
-          url: this.page.url(),
-          fields,
-          outcome: 'failed',
-          recoveredFields: [],
-          error: error instanceof Error ? error.message : String(error),
-        };
-      }
-
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
         await this.navigation.next();
-        return { stepIndex, url: this.page.url(), fields, outcome: 'recovered', recoveredFields: recovered };
-      } catch (secondError) {
         return {
           stepIndex,
           url: this.page.url(),
           fields,
-          outcome: 'failed',
-          recoveredFields: recovered,
-          error: secondError instanceof Error ? secondError.message : String(secondError),
+          outcome: recoveredAll.length > 0 ? 'recovered' : 'advanced',
+          recoveredFields: recoveredAll,
         };
+      } catch (error) {
+        const missing = this.parseMissingFields(error).filter((label) => !handled.has(label));
+        let recoveredThisRound = 0;
+
+        for (const label of missing) {
+          handled.add(label);
+          const filled = await this.fillByLabel(label);
+          if (filled) {
+            fields.push(filled);
+            recoveredAll.push(label);
+            recoveredThisRound += 1;
+          }
+        }
+
+        const revealedFields = await this.fillVisibleFields(handled);
+        fields.push(...revealedFields);
+
+        if (recoveredThisRound === 0 && revealedFields.length === 0) {
+          return {
+            stepIndex,
+            url: this.page.url(),
+            fields,
+            outcome: 'failed',
+            recoveredFields: recoveredAll,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+        // something changed this round - loop and try next() again
       }
     }
+
+    return {
+      stepIndex,
+      url: this.page.url(),
+      fields,
+      outcome: 'failed',
+      recoveredFields: recoveredAll,
+      error: 'Could not advance after 5 recovery attempts',
+    };
   }
 
   private parseMissingFields(error: unknown): string[] {

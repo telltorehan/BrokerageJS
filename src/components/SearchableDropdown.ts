@@ -111,7 +111,11 @@ export class SearchableDropdown {
     let real: string[] = [];
     do {
       const texts = (await optionLocator.allTextContents()).map((text) => text.trim()).filter((text) => text.length > 0);
-      real = texts.filter((text) => !/^-?\s*(please )?select\s*-?$/i.test(text));
+      // a real run on a new form had its placeholder written as
+      // "(Please Select)" - parentheses the existing pattern didn't
+      // account for, so it was treated as a real option and got picked
+      // as the field's value, leaving the field effectively unfilled
+      real = texts.filter((text) => !/^\(?-?\s*(please )?select\s*-?\)?$/i.test(text));
       if (real.length > 0) {
         break;
       }
