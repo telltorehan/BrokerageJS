@@ -5,17 +5,19 @@ export class DashboardPage {
   constructor(private readonly page: Page) {}
 
   get pageIndicator(): Locator {
-    // "New referral" only ever matched uniquely by coincidence - it's a
-    // substring of this card's own "Create a new referral record" text.
-    // every earlier flow opened the modal once and then navigated away
-    // (choose() loads a new URL), so there was never a second "New
-    // referral" to collide with. the multi-form discovery flow closes
-    // the modal without navigating (just to read its tile list) and
-    // reopens it - the closed modal's own <h5>New referral</h5> stays in
-    // the DOM hidden, same persistence pattern seen everywhere else in
-    // this app, and getByText('New referral') then matches both. scope
-    // to text that's specific to this card and never appears in the modal
-    return this.page.getByText('Create a new referral record');
+    // .new_referral is a stable cross-environment marker, confirmed from
+    // two environments' real dashboard markup: this one renders it as a
+    // <div class="brokerage-block ... new_referral"> card, Richmond &
+    // Wandsworth's is a plain <a class="btn btn-success new_referral">
+    // in a different layout position entirely - different tag, different
+    // surrounding classes, different placement, same marker class. it's
+    // clearly how the platform itself tags "this opens the new-referral
+    // modal", not incidental styling, so it should hold across any
+    // environment built on the same platform. far more durable than the
+    // text-matching this used before, which also differs per environment
+    // (this card has a "Create a new referral record" subtitle, Richmond
+    // & Wandsworth's button has no subtitle at all)
+    return this.page.locator('.new_referral').first();
   }
 
   async open(): Promise<void> {
