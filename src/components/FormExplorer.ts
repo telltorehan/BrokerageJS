@@ -48,6 +48,21 @@ export interface ExplorationReport {
 async function checkWithFallback(locator: Locator): Promise<void> {
   try {
     await locator.check({ timeout: 4000 });
+    return;
+  } catch {
+    // fall through to the retry below
+  }
+
+  // seen live on a freshly-revealed radio group: the very first click
+  // attempt failed regardless of which option was picked (confirmed
+  // across runs - different options failed each time), even under a
+  // forced click, but a later attempt on a different option succeeded.
+  // that pattern points to the widget not being fully interactive the
+  // instant it becomes visible, not to force being the wrong tool - so
+  // wait a beat and retry normally before reaching for force at all
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  try {
+    await locator.check({ timeout: 4000 });
   } catch {
     await locator.check({ force: true });
   }
