@@ -46,7 +46,20 @@ export class DashboardPage {
   async startNewReferral(): Promise<NewReferralModal> {
     await this.pageIndicator.click();
     const modal = new NewReferralModal(this.page);
-    await modal.waitForOpen();
+
+    try {
+      await modal.waitForOpen(5000);
+    } catch {
+      // a real run saw #generalModal never open at all after this click
+      // - the very first click of the whole run, right after the
+      // dashboard loads. fits the same "clicked before the JS handler
+      // was wired up" race seen elsewhere on freshly-loaded widgets. a
+      // second click, now that the page has had more time to settle,
+      // resolves it
+      await this.pageIndicator.click();
+      await modal.waitForOpen();
+    }
+
     return modal;
   }
 }

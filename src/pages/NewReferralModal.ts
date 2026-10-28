@@ -7,8 +7,8 @@ export class NewReferralModal {
     this.root = page.locator('#generalModal');
   }
 
-  async waitForOpen(): Promise<void> {
-    await expect(this.root).toBeVisible();
+  async waitForOpen(timeout?: number): Promise<void> {
+    await expect(this.root).toBeVisible(timeout ? { timeout } : undefined);
   }
 
   async choose(serviceType: string): Promise<void> {
