@@ -19,9 +19,9 @@ async function hideBlockingToasts(page: Page): Promise<void> {
   });
 }
 
-async function clickOptionPastToast(page: Page, option: Locator, timeout: number): Promise<void> {
+async function clickOptionPastToast(page: Page, getOption: () => Locator, timeout: number, reopen: () => Promise<void>): Promise<void> {
   try {
-    await option.click({ timeout });
+    await getOption().click({ timeout });
     return;
   } catch {
     // fall through to the retry loop below
@@ -38,8 +38,21 @@ async function clickOptionPastToast(page: Page, option: Locator, timeout: number
   let lastError: unknown;
   while (Date.now() < deadline) {
     await hideBlockingToasts(page);
+
+    // a real run showed a failure with none of the toast-interception
+    // detail Playwright normally logs when something's covering the
+    // click - just "couldn't find the option", which fits the dropdown
+    // menu itself having closed (possibly a side effect of the retrying
+    // above) rather than a toast sitting on top of it. retrying a click
+    // on an option that isn't there anymore can never succeed, so
+    // reopen the menu first when that's what's actually happened
+    const option = getOption();
+    if (!(await option.isVisible().catch(() => false))) {
+      await reopen();
+    }
+
     try {
-      await option.click({ timeout: 1500 });
+      await getOption().click({ timeout: 1500 });
       return;
     } catch (error) {
       lastError = error;
@@ -117,8 +130,10 @@ export class SearchableDropdown {
     }
 
     const picked = faker.helpers.arrayElement(real);
-    const option = optionLocator.filter({ hasText: new RegExp(`^${escapeForRegExp(picked)}$`) }).first();
-    await clickOptionPastToast(this.page, option, 10000);
+    const getOption = () => optionLocator.filter({ hasText: new RegExp(`^${escapeForRegExp(picked)}$`) }).first();
+    await clickOptionPastToast(this.page, getOption, 10000, async () => {
+      await this.toggle.first().click();
+    });
     await this.page.keyboard.press('Escape');
     return picked;
   }
@@ -128,11 +143,14 @@ export class SearchableDropdown {
     let real: string[] = [];
     do {
       const texts = (await optionLocator.allTextContents()).map((text) => text.trim()).filter((text) => text.length > 0);
-      // a real run on a new form had its placeholder written as
-      // "(Please Select)" - parentheses the existing pattern didn't
-      // account for, so it was treated as a real option and got picked
-      // as the field's value, leaving the field effectively unfilled
-      real = texts.filter((text) => !/^\(?-?\s*(please )?select\s*-?\)?$/i.test(text));
+      // different environments write their placeholder differently -
+      // "(Please Select)" (parentheses) on one real run, "Nothing
+      // selected" (a completely different word) on another - both got
+      // treated as real options and picked as the field's value,
+      // leaving it effectively unfilled despite looking "successful"
+      real = texts.filter(
+        (text) => !/^\(?-?\s*(please )?select\s*-?\)?$/i.test(text) && !/^nothing selected$/i.test(text),
+      );
       if (real.length > 0) {
         break;
       }
@@ -168,11 +186,14 @@ export class SearchableDropdown {
     // some dropdowns in this app genuinely have two options with identical
     // text (e.g. the "Care Home" list has "Test" listed twice) - take the
     // first match deterministically instead of a strict-mode violation
-    const option = this.page
-      .locator('a[role="option"]:visible')
-      .filter({ hasText: new RegExp(`^${escapeForRegExp(optionText)}$`) })
-      .first();
-    await clickOptionPastToast(this.page, option, 10000);
+    const getOption = () =>
+      this.page
+        .locator('a[role="option"]:visible')
+        .filter({ hasText: new RegExp(`^${escapeForRegExp(optionText)}$`) })
+        .first();
+    await clickOptionPastToast(this.page, getOption, 10000, async () => {
+      await this.toggle.first().click();
+    });
     // the open menu sits on top of whatever field comes next, close it
     // explicitly rather than relying on the click having done that
     await this.page.keyboard.press('Escape');
