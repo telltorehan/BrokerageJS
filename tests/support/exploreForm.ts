@@ -26,7 +26,11 @@ function checkFields(fields: FilledField[], stepIndex: number, formName: string)
   }
 }
 
-export async function loginAndGoToDashboard(page: Page): Promise<void> {
+// returns the DashboardPage it used, so a caller that needs to return to
+// the dashboard later (the multi-form audit, between forms) can reuse
+// the same instance and its cached real URL instead of creating a fresh
+// one with no URL remembered yet
+export async function loginAndGoToDashboard(page: Page): Promise<DashboardPage> {
   const email = process.env.BROKERAGE_EMAIL ?? '';
   const password = process.env.BROKERAGE_PASSWORD ?? '';
 
@@ -36,6 +40,7 @@ export async function loginAndGoToDashboard(page: Page): Promise<void> {
 
   const dashboard = new DashboardPage(page);
   await dashboard.waitForLoaded();
+  return dashboard;
 }
 
 // shared by both ways of opening a form (clicking a tile, or navigating

@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { DashboardPage } from '../src/pages/DashboardPage';
 import { ExplorationReport } from '../src/components/FormExplorer';
 import { exploreFormAtUrl, loginAndGoToDashboard } from './support/exploreForm';
 import { renderSummaryHtml } from './support/renderReportHtml';
@@ -24,9 +23,10 @@ test('explores every referral form currently offered by this environment', async
   // many forms exist today, not a number fixed in advance
   test.setTimeout(30 * 60 * 1000);
 
-  await loginAndGoToDashboard(page);
-
-  const dashboard = new DashboardPage(page);
+  // reuse the same DashboardPage instance throughout - it remembers the
+  // real dashboard URL once waitForLoaded() runs, which open() below
+  // relies on instead of guessing a route that differs per environment
+  const dashboard = await loginAndGoToDashboard(page);
   const modal = await dashboard.startNewReferral();
   const forms = await modal.listForms();
   await modal.close();

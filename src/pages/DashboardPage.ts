@@ -2,6 +2,8 @@ import { Locator, Page } from '@playwright/test';
 import { NewReferralModal } from './NewReferralModal';
 
 export class DashboardPage {
+  private dashboardUrl: string | null = null;
+
   constructor(private readonly page: Page) {}
 
   get pageIndicator(): Locator {
@@ -21,15 +23,24 @@ export class DashboardPage {
   }
 
   async open(): Promise<void> {
-    await this.page.goto('/ReferralHome');
+    // confirmed from a real run: the dashboard's own route differs per
+    // environment (this one: /ReferralHome, Richmond & Wandsworth:
+    // /BrokerHome) - rather than guess or hardcode either, navigate back
+    // to whatever URL we actually landed on last time waitForLoaded()
+    // ran. before that's ever happened, '/' is the one page any
+    // environment should redirect an authenticated session from
+    await this.page.goto(this.dashboardUrl ?? '/');
     await this.waitForLoaded();
   }
 
   async waitForLoaded(): Promise<void> {
-    // app serves /ReferralHome but redirects to /referralhome after
-    // navigating back from the wizard, match case-insensitively
-    await this.page.waitForURL(/\/referralhome/i);
+    // don't assert a specific URL pattern here - that's exactly what
+    // broke on Richmond & Wandsworth. the new-referral marker is the one
+    // thing confirmed to hold across environments, so wait on that
+    // instead, and remember wherever it is we ended up for open() to
+    // reuse later
     await this.pageIndicator.waitFor({ state: 'visible' });
+    this.dashboardUrl = this.page.url();
   }
 
   async startNewReferral(): Promise<NewReferralModal> {
