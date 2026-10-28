@@ -248,8 +248,7 @@ export class FormExplorer {
   // already tried, so a field that's genuinely stuck still fails loudly
   // instead of looping forever
   private async exploreStep(stepIndex: number): Promise<StepReport> {
-    const handled = new Set<string>();
-    const fields = await this.fillVisibleFields(handled);
+    const fields = await this.fillVisibleFields();
     const recoveredAll: string[] = [];
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -263,11 +262,10 @@ export class FormExplorer {
           recoveredFields: recoveredAll,
         };
       } catch (error) {
-        const missing = this.parseMissingFields(error).filter((label) => !handled.has(label));
+        const missing = this.parseMissingFields(error);
         let recoveredThisRound = 0;
 
         for (const label of missing) {
-          handled.add(label);
           const filled = await this.fillByLabel(label);
           if (filled) {
             fields.push(filled);
@@ -276,7 +274,11 @@ export class FormExplorer {
           }
         }
 
-        const revealedFields = await this.fillVisibleFields(handled);
+        // fillByLabel marks each DOM element it finds as handled, so a
+        // label from a previous round that's already been dealt with
+        // (filled, or genuinely stuck) just finds nothing and returns
+        // null quickly - no need to track attempted labels separately
+        const revealedFields = await this.fillVisibleFields();
         fields.push(...revealedFields);
 
         if (recoveredThisRound === 0 && revealedFields.length === 0) {
@@ -317,48 +319,59 @@ export class FormExplorer {
   }
 
   // fills a single field found by its exact label text - used for the
-  // recovery pass, where we know the name but haven't scanned for it yet
+  // recovery pass, where we know the name but haven't scanned for it yet.
+  // excludes already-marked groups for the same reason fillVisibleFields
+  // does: two different fields can share the exact same label text (a
+  // "Hospital name" dropdown revealing a second, separately required
+  // "Hospital name" text box when set to "Other" - confirmed on a real
+  // form), so matching by label text alone can resolve to the wrong one
   private async fillByLabel(label: string): Promise<FilledField | null> {
     const group = this.page
-      .locator('.form-group:visible')
+      .locator('.form-group:visible:not([data-explored-handled])')
       .filter({ has: this.page.locator('label', { hasText: label }) })
       .first();
     const present = await group.isVisible().catch(() => false);
     if (!present) {
       return null;
     }
+    await group.evaluate((el) => el.setAttribute('data-explored-handled', 'true'));
     return this.fillGroup(group, label);
   }
 
   // repeatedly scans the step for not-yet-handled visible groups and
   // fills each one, recursing into anything newly revealed, until a full
   // pass finds nothing new - this is the "analyze the page as data goes
-  // in" behavior: every fill is followed by a fresh look at the DOM
-  private async fillVisibleFields(handled: Set<string>): Promise<FilledField[]> {
+  // in" behavior: every fill is followed by a fresh look at the DOM.
+  // "handled" used to be a label-text Set, but two fields can genuinely
+  // share the same label (confirmed live: a revealed "Hospital name"
+  // text box with the exact same label as the "Hospital name" dropdown
+  // that revealed it) - tracking by label meant filling the first
+  // permanently hid the second from every later pass, even though it's
+  // a completely different element that still needs its own value.
+  // marking the actual DOM element instead identifies "have I already
+  // filled THIS one" correctly regardless of what any other field is
+  // labeled. .all() resolves the current matches once per pass as a
+  // fixed list, so marking one doesn't shift the position of the next
+  private async fillVisibleFields(): Promise<FilledField[]> {
     const results: FilledField[] = [];
 
     for (let pass = 0; pass < 20; pass += 1) {
-      const groups = this.page.locator('.form-group:visible');
-      const count = await groups.count();
-      let foundNew = false;
+      const groups = await this.page.locator('.form-group:visible:not([data-explored-handled])').all();
+      if (groups.length === 0) {
+        break;
+      }
 
-      for (let i = 0; i < count; i += 1) {
-        const group = groups.nth(i);
+      for (const group of groups) {
+        await group.evaluate((el) => el.setAttribute('data-explored-handled', 'true'));
         const label = await this.readGroupLabel(group);
-        if (!label || handled.has(label)) {
+        if (!label) {
           continue;
         }
-        handled.add(label);
-        foundNew = true;
 
         const filled = await this.fillGroup(group, label);
         if (filled) {
           results.push(filled);
         }
-      }
-
-      if (!foundNew) {
-        break;
       }
     }
 
