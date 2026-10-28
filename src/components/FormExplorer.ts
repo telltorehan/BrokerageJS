@@ -320,22 +320,29 @@ export class FormExplorer {
 
   // fills a single field found by its exact label text - used for the
   // recovery pass, where we know the name but haven't scanned for it yet.
-  // excludes already-marked groups for the same reason fillVisibleFields
-  // does: two different fields can share the exact same label text (a
-  // "Hospital name" dropdown revealing a second, separately required
-  // "Hospital name" text box when set to "Other" - confirmed on a real
-  // form), so matching by label text alone can resolve to the wrong one
+  // skips a candidate already marked handled for the same reason
+  // fillVisibleFields does: two different fields can share the exact
+  // same label text (a "Hospital name" dropdown revealing a second,
+  // separately required "Hospital name" text box when set to "Other" -
+  // confirmed on a real form), so matching by label text alone can
+  // resolve to the wrong one. baking the exclusion into the selector
+  // itself caused a confirmed bug (see fillVisibleFields) - check each
+  // candidate's own attribute explicitly instead
   private async fillByLabel(label: string): Promise<FilledField | null> {
-    const group = this.page
-      .locator('.form-group:visible:not([data-explored-handled])')
-      .filter({ has: this.page.locator('label', { hasText: label }) })
-      .first();
-    const present = await group.isVisible().catch(() => false);
-    if (!present) {
-      return null;
+    const candidates = this.page.locator('.form-group:visible').filter({ has: this.page.locator('label', { hasText: label }) });
+    const count = await candidates.count();
+
+    for (let i = 0; i < count; i += 1) {
+      const candidate = candidates.nth(i);
+      const alreadyHandled = await candidate.evaluate((el) => el.hasAttribute('data-explored-handled'));
+      if (alreadyHandled) {
+        continue;
+      }
+      await candidate.evaluate((el) => el.setAttribute('data-explored-handled', 'true'));
+      return this.fillGroup(candidate, label);
     }
-    await group.evaluate((el) => el.setAttribute('data-explored-handled', 'true'));
-    return this.fillGroup(group, label);
+
+    return null;
   }
 
   // repeatedly scans the step for not-yet-handled visible groups and
@@ -350,28 +357,49 @@ export class FormExplorer {
   // a completely different element that still needs its own value.
   // marking the actual DOM element instead identifies "have I already
   // filled THIS one" correctly regardless of what any other field is
-  // labeled. .all() resolves the current matches once per pass as a
-  // fixed list, so marking one doesn't shift the position of the next
+  // labeled.
+  //
+  // the base selector here deliberately does NOT exclude already-marked
+  // elements - confirmed directly (ran a real Locator against a 3-element
+  // page and inspected it) that baking :not([data-explored-handled])
+  // into a selector reused across a loop is unsafe: Locators re-resolve
+  // lazily, so marking one element shrinks what the live selector
+  // matches, which silently shifts every other nth(i)/`.all()` result in
+  // the same batch onto the WRONG element - the exact mechanism that
+  // caused real required fields (Last name, Sex registered at birth, and
+  // others) to go unfilled on a real run. keeping the base selector
+  // unfiltered means marking one element never changes what any index
+  // means, and each candidate's own handled state is checked explicitly
   private async fillVisibleFields(): Promise<FilledField[]> {
     const results: FilledField[] = [];
 
     for (let pass = 0; pass < 20; pass += 1) {
-      const groups = await this.page.locator('.form-group:visible:not([data-explored-handled])').all();
-      if (groups.length === 0) {
-        break;
-      }
+      const groups = this.page.locator('.form-group:visible');
+      const count = await groups.count();
+      let foundNew = false;
 
-      for (const group of groups) {
+      for (let i = 0; i < count; i += 1) {
+        const group = groups.nth(i);
+        const alreadyHandled = await group.evaluate((el) => el.hasAttribute('data-explored-handled'));
+        if (alreadyHandled) {
+          continue;
+        }
         await group.evaluate((el) => el.setAttribute('data-explored-handled', 'true'));
+
         const label = await this.readGroupLabel(group);
         if (!label) {
           continue;
         }
+        foundNew = true;
 
         const filled = await this.fillGroup(group, label);
         if (filled) {
           results.push(filled);
         }
+      }
+
+      if (!foundNew) {
+        break;
       }
     }
 
