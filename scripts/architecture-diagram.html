@@ -1,0 +1,337 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Form Exploration Engine</title>
+<style>
+  /* layout: a top-to-bottom pipeline (config -> orchestration -> page
+     objects -> engine -> widget drivers -> output), with the engine's
+     internal loop shown as a zoomed detail panel beside it */
+  :root {
+    --bg: #faf9f6;
+    --panel: #ffffff;
+    --ink: #1c1a16;
+    --ink-soft: #5c574c;
+    --line: #ddd8cc;
+    --accent: #1f6f54;
+    --accent-soft: #e4f1ec;
+    --amber: #a8712a;
+    --amber-soft: #f6ead8;
+    --plum: #6a4a8c;
+    --plum-soft: #ece4f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15140f;
+      --panel: #201e17;
+      --ink: #f1ede2;
+      --ink-soft: #b3ac9a;
+      --line: #3a3528;
+      --accent: #5fbf98;
+      --accent-soft: #1d3029;
+      --amber: #e0a85c;
+      --amber-soft: #3a2d18;
+      --plum: #b79bdc;
+      --plum-soft: #2c2438;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15140f;
+    --panel: #201e17;
+    --ink: #f1ede2;
+    --ink-soft: #b3ac9a;
+    --line: #3a3528;
+    --accent: #5fbf98;
+    --accent-soft: #1d3029;
+    --amber: #e0a85c;
+    --amber-soft: #3a2d18;
+    --plum: #b79bdc;
+    --plum-soft: #2c2438;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding-block: 32px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 1180px; margin: 0 auto; }
+
+  h1 { font-size: 1.6rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); font-size: 0.95rem; margin: 0 0 28px; max-width: 70ch; }
+
+  .diagram-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 8px; overflow-x: auto; }
+  svg { display: block; width: 100%; height: auto; min-width: 920px; }
+
+  .notes { margin-top: 36px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .note h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin: 0 0 8px; }
+  .note p { margin: 0; font-size: 0.92rem; line-height: 1.5; }
+  .note code { background: var(--accent-soft); color: var(--accent); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+</style>
+
+<main>
+  <h1>Form Exploration Engine</h1>
+  <p class="sub">
+    One generic pipeline that logs into any of this platform's environments, discovers whatever referral
+    forms exist that day, fills every field it finds, and reports what happened &mdash; with no form names
+    or environment URLs hardcoded anywhere in the code.
+  </p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 1180 1700" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-soft)"></path>
+        </marker>
+      </defs>
+
+      <style>
+        .lane-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; fill: var(--ink-soft); }
+        .box { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; rx: 10; }
+        .box-title { font-size: 14px; font-weight: 700; fill: var(--ink); }
+        .box-sub { font-size: 11.5px; fill: var(--ink-soft); }
+        .box-code { font-size: 11px; fill: var(--accent); font-family: "SF Mono", Consolas, monospace; }
+        .edge { stroke: var(--ink-soft); stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+        .edge-loop { stroke: var(--plum); stroke-width: 1.6; fill: none; stroke-dasharray: 4 3; marker-end: url(#arrow); }
+        .pill { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.2; rx: 16; }
+        .pill-text { font-size: 12px; font-weight: 600; fill: var(--accent); }
+        .section-bg { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; rx: 14; }
+      </style>
+
+      <!-- ===================== 1. CONFIG ===================== -->
+      <text x="40" y="34" class="lane-label">1 &middot; Configuration (per environment)</text>
+      <rect x="30" y="46" width="300" height="70" class="box"></rect>
+      <text x="50" y="72" class="box-title">.env</text>
+      <text x="50" y="90" class="box-sub">BASE_URL, BROKERAGE_EMAIL,</text>
+      <text x="50" y="104" class="box-sub">BROKERAGE_PASSWORD</text>
+
+      <path d="M330,81 H420" class="edge"></path>
+
+      <rect x="420" y="46" width="320" height="70" class="box"></rect>
+      <text x="440" y="72" class="box-title">playwright.config.ts</text>
+      <text x="440" y="90" class="box-sub">reads env vars, sets baseURL,</text>
+      <text x="440" y="104" class="box-sub">timeouts, HTML reporter</text>
+
+      <path d="M740,81 H830" class="edge"></path>
+
+      <!-- environment pills -->
+      <g>
+        <rect x="830" y="34" width="150" height="32" class="pill"></rect>
+        <text x="905" y="55" text-anchor="middle" class="pill-text">Next</text>
+        <rect x="830" y="72" width="150" height="32" class="pill"></rect>
+        <text x="905" y="93" text-anchor="middle" class="pill-text">Surrey</text>
+        <rect x="990" y="34" width="150" height="70" class="pill"></rect>
+        <text x="1065" y="62" text-anchor="middle" class="pill-text">Richmond &amp;</text>
+        <text x="1065" y="78" text-anchor="middle" class="pill-text">Wandsworth</text>
+      </g>
+      <text x="830" y="118" class="box-sub">same code across all three &mdash; just different env values</text>
+
+      <path d="M180,116 V188" class="edge"></path>
+
+      <!-- ===================== 2. ENTRY POINT ===================== -->
+      <text x="40" y="178" class="lane-label">2 &middot; Entry point</text>
+      <rect x="30" y="190" width="1120" height="56" class="box"></rect>
+      <text x="50" y="215" class="box-title">tests/explore-all-forms.spec.ts</text>
+      <text x="400" y="215" class="box-sub">&mdash; the one test that drives the whole run, for any environment</text>
+
+      <path d="M590,246 V318" class="edge"></path>
+
+      <!-- ===================== 3. ORCHESTRATION ===================== -->
+      <text x="40" y="308" class="lane-label">3 &middot; Orchestration</text>
+      <rect x="30" y="320" width="1120" height="92" class="box"></rect>
+      <text x="50" y="345" class="box-title">tests/support/exploreForm.ts</text>
+      <text x="50" y="365" class="box-sub">loginAndGoToDashboard &rarr; discover forms &rarr; for each form: open it, run the engine, write + attach the report</text>
+      <text x="50" y="385" class="box-sub">also: soft-fails any field that didn't actually fill, directly inside Playwright's own report</text>
+
+      <path d="M250,412 V498" class="edge"></path>
+      <path d="M590,412 V498" class="edge"></path>
+      <path d="M930,412 V498" class="edge"></path>
+
+      <!-- ===================== 4. PAGE OBJECTS ===================== -->
+      <text x="40" y="474" class="lane-label">4 &middot; Page objects (know the real DOM, so nothing else has to)</text>
+      <rect x="20" y="486" width="1140" height="108" class="section-bg"></rect>
+
+      <rect x="40" y="500" width="330" height="80" class="box"></rect>
+      <text x="58" y="524" class="box-title">LoginPage</text>
+      <text x="58" y="544" class="box-sub">fills #Email / #Password,</text>
+      <text x="58" y="560" class="box-sub">clicks Login</text>
+
+      <rect x="400" y="500" width="360" height="80" class="box"></rect>
+      <text x="418" y="524" class="box-title">DashboardPage</text>
+      <text x="418" y="544" class="box-sub">finds the referral button by its</text>
+      <text x="418" y="560" class="box-code">.new_referral</text>
+      <text x="508" y="560" class="box-sub">class &mdash; not its text</text>
+      <text x="418" y="574" class="box-sub">remembers the real dashboard URL</text>
+
+      <rect x="790" y="500" width="350" height="80" class="box"></rect>
+      <text x="808" y="524" class="box-title">NewReferralModal</text>
+      <text x="808" y="544" class="box-sub">reads real tiles via</text>
+      <text x="808" y="560" class="box-code">.brokerage-block[data-url]</text>
+      <text x="808" y="576" class="box-sub">&mdash; title + URL per form, no guessing</text>
+
+      <path d="M590,594 V666" class="edge"></path>
+
+      <!-- ===================== 5. CORE ENGINE ===================== -->
+      <text x="40" y="656" class="lane-label">5 &middot; Core engine &mdash; per form, per step</text>
+      <rect x="30" y="668" width="700" height="360" class="box"></rect>
+      <text x="50" y="696" class="box-title">src/components/FormExplorer.ts</text>
+
+      <!-- inner loop steps -->
+      <rect x="55" y="716" width="300" height="52" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"></rect>
+      <text x="70" y="736" class="box-title" font-size="12.5">Scan every visible field</text>
+      <text x="70" y="752" class="box-sub">classify: dropdown / radio / checkbox / text / rich text</text>
+
+      <path d="M205,768 V786" class="edge"></path>
+
+      <rect x="55" y="786" width="300" height="52" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"></rect>
+      <text x="70" y="806" class="box-title" font-size="12.5">Fill it with realistic data</text>
+      <text x="70" y="822" class="box-sub">UK faker + curated phrase banks</text>
+
+      <path d="M205,838 V856" class="edge"></path>
+
+      <rect x="55" y="856" width="300" height="52" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"></rect>
+      <text x="70" y="876" class="box-title" font-size="12.5">Detect what it revealed</text>
+      <text x="70" y="892" class="box-sub">new fields re-queued for the same pass</text>
+
+      <path d="M205,908 V926" class="edge"></path>
+
+      <rect x="55" y="926" width="300" height="52" rx="8" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1"></rect>
+      <text x="70" y="946" class="box-title" font-size="12.5">Click Next</text>
+      <text x="70" y="962" class="box-sub">watches for the app's own "Problem" dialog</text>
+
+      <!-- loop back arrow for reveal -->
+      <path d="M355,742 C 400,742 400,900 355,882" class="edge-loop"></path>
+
+      <!-- recovery branch -->
+      <path d="M355,952 H420" class="edge"></path>
+      <rect x="420" y="912" width="290" height="80" rx="8" fill="var(--plum-soft)" stroke="var(--plum)" stroke-width="1"></rect>
+      <text x="436" y="934" class="box-title" font-size="12.5" fill="var(--plum)">If something's still missing</text>
+      <text x="436" y="952" class="box-sub">fill exactly those fields, rescan for</text>
+      <text x="436" y="966" class="box-sub">anything THEY reveal, try Next again</text>
+      <text x="436" y="980" class="box-sub">(bounded loop, up to 5 rounds)</text>
+      <path d="M420,952 H370" class="edge-loop"></path>
+
+      <text x="55" y="1000" class="box-sub" font-weight="600">Every field is marked as "already filled" on the real DOM element itself,</text>
+      <text x="55" y="1017" class="box-sub" font-weight="600">not by its label text &mdash; two fields can share a label and still both get filled.</text>
+
+      <!-- side detail panel: data sources -->
+      <rect x="760" y="668" width="390" height="360" class="box"></rect>
+      <text x="780" y="696" class="box-title">Test data</text>
+      <text x="780" y="720" class="box-sub">@faker-js/faker, UK locale</text>
+      <text x="780" y="738" class="box-sub">&mdash; names, addresses, postcodes, phone numbers</text>
+      <text x="780" y="760" class="box-sub">curated phrase banks</text>
+      <text x="780" y="778" class="box-sub">&mdash; care goals, notes, ward names (not lorem ipsum)</text>
+      <text x="780" y="800" class="box-sub">placeholder filter</text>
+      <text x="780" y="818" class="box-sub">&mdash; skips "- Select -", "(Please Select)",</text>
+      <text x="780" y="834" class="box-sub">&nbsp;&nbsp;"Nothing selected", whatever an environment uses</text>
+
+      <line x1="780" y1="856" x2="1130" y2="856" stroke="var(--line)"></line>
+
+      <text x="780" y="880" class="box-title" font-size="13">Resilience built in</text>
+      <text x="780" y="900" class="box-sub">retries past autosave toast notifications,</text>
+      <text x="780" y="916" class="box-sub">re-opens a dropdown that closed early,</text>
+      <text x="780" y="932" class="box-sub">waits out freshly-revealed widgets not</text>
+      <text x="780" y="948" class="box-sub">yet wired up &mdash; every fix verified against</text>
+      <text x="780" y="964" class="box-sub">a real failure, never guessed blind</text>
+
+      <path d="M380,1028 V1082" class="edge"></path>
+
+      <!-- ===================== 6. WIDGET DRIVERS ===================== -->
+      <text x="40" y="1060" class="lane-label">6 &middot; Widget drivers (one per UI pattern, reused everywhere)</text>
+      <rect x="20" y="1072" width="1140" height="80" class="section-bg"></rect>
+
+      <rect x="40" y="1084" width="265" height="56" class="box"></rect>
+      <text x="56" y="1108" class="box-title" font-size="13">SearchableDropdown</text>
+      <text x="56" y="1126" class="box-sub">bootstrap-select widgets</text>
+
+      <rect x="325" y="1084" width="200" height="56" class="box"></rect>
+      <text x="341" y="1108" class="box-title" font-size="13">RadioGroup</text>
+      <text x="341" y="1126" class="box-sub">forced-click fallback</text>
+
+      <rect x="545" y="1084" width="220" height="56" class="box"></rect>
+      <text x="561" y="1108" class="box-title" font-size="13">RichTextEditor</text>
+      <text x="561" y="1126" class="box-sub">TinyMCE iframes</text>
+
+      <rect x="785" y="1084" width="335" height="56" class="box"></rect>
+      <text x="801" y="1108" class="box-title" font-size="13">WizardNavigation</text>
+      <text x="801" y="1126" class="box-sub">the shared "Next" + Problem-dialog check</text>
+
+      <path d="M590,1152 V1238" class="edge"></path>
+
+      <!-- ===================== 7. OUTPUT ===================== -->
+      <text x="40" y="1214" class="lane-label">7 &middot; Output &mdash; one run, every form</text>
+      <rect x="20" y="1226" width="1140" height="130" class="section-bg"></rect>
+
+      <rect x="40" y="1240" width="260" height="96" class="box"></rect>
+      <text x="56" y="1264" class="box-title" font-size="13">exploration-reports/</text>
+      <text x="56" y="1282" class="box-sub">raw JSON per form,</text>
+      <text x="56" y="1298" class="box-sub">one file per run</text>
+
+      <rect x="320" y="1240" width="280" height="96" class="box"></rect>
+      <text x="336" y="1264" class="box-title" font-size="13">Playwright's own report</text>
+      <text x="336" y="1282" class="box-sub">tick/cross per field, soft-fails</text>
+      <text x="336" y="1298" class="box-sub">surface each broken field by name</text>
+
+      <rect x="620" y="1240" width="260" height="96" class="box"></rect>
+      <text x="636" y="1264" class="box-title" font-size="13">report-viewer.html</text>
+      <text x="636" y="1282" class="box-sub">local, drag a report in,</text>
+      <text x="636" y="1298" class="box-sub">no upload, works offline</text>
+
+      <rect x="900" y="1240" width="240" height="96" class="box"></rect>
+      <text x="916" y="1264" class="box-title" font-size="13">audit-report.js</text>
+      <text x="916" y="1282" class="box-sub">CLI dump of every</text>
+      <text x="916" y="1298" class="box-sub">label/kind/value</text>
+
+      <!-- summary strip -->
+      <rect x="30" y="1380" width="1120" height="150" rx="12" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"></rect>
+      <text x="56" y="1414" class="box-title" fill="var(--accent)" font-size="15">What makes this cross-environment</text>
+      <text x="56" y="1442" class="box-sub">Nothing is matched by English wording &mdash; every environment-spanning lookup uses real HTML structure instead:</text>
+      <text x="56" y="1464" class="box-sub">&bull; the referral button: the <tspan class="box-code">.new_referral</tspan> class, found on a <tspan class="box-code">&lt;div&gt;</tspan> card on one environment and a plain <tspan class="box-code">&lt;a&gt;</tspan> button on another</text>
+      <text x="56" y="1484" class="box-sub">&bull; the form list: <tspan class="box-code">.brokerage-block[data-url]</tspan> tiles in the popup, read directly instead of parsed from a description sentence</text>
+      <text x="56" y="1504" class="box-sub">&bull; the dashboard's own URL: never hardcoded &mdash; remembered from wherever login actually lands (differs per environment)</text>
+
+      <!-- vertical connector from output to summary -->
+      <path d="M590,1336 V1380" class="edge"></path>
+    </svg>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h2>Why this works everywhere</h2>
+      <p>
+        Every cross-environment lookup reads real DOM structure (a class name, a <code>data-url</code> attribute)
+        instead of matching rendered English text, which differs by environment and even by form. The one time
+        text-matching was tried for form discovery, a form with no description line got silently skipped &mdash;
+        the fix switched to structure and that whole class of bug stopped recurring.
+      </p>
+    </div>
+    <div class="note">
+      <h2>How a new form gets covered</h2>
+      <p>
+        It doesn't need new code. <code>explore-all-forms.spec.ts</code> reads whatever the popup currently
+        lists and runs the same engine against each one. A form added to an environment tomorrow is picked up
+        on the next run automatically.
+      </p>
+    </div>
+    <div class="note">
+      <h2>How a new environment gets covered</h2>
+      <p>
+        Point <code>BASE_URL</code>, <code>BROKERAGE_EMAIL</code> and <code>BROKERAGE_PASSWORD</code> at it and
+        run the same test. Proven against three real environments (Next, Surrey, Richmond &amp; Wandsworth) with
+        zero environment-specific code paths.
+      </p>
+    </div>
+    <div class="note">
+      <h2>Every fix is evidence-driven</h2>
+      <p>
+        Each hardening in the engine &mdash; retrying past a toast notification, re-opening a dropdown that
+        closed early, recovering from a cascading reveal &mdash; was written against a real failure captured
+        from a live run, verified, then committed. Nothing here was guessed blind.
+      </p>
+    </div>
+  </div>
+</main>
