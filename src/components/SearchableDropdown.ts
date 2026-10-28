@@ -49,6 +49,15 @@ async function clickOptionPastToast(page: Page, getOption: () => Locator, timeou
     const option = getOption();
     if (!(await option.isVisible().catch(() => false))) {
       await reopen();
+      // reopen() clicks a toggle button, not a dedicated "open" action -
+      // clicking right after can land before the freshly-reopened menu
+      // has actually finished rendering its options again (the same
+      // "not wired up yet" race fixed elsewhere), so the very next
+      // click attempt fails for a third, different reason. give it a
+      // moment to actually appear before trying to click it
+      await getOption()
+        .waitFor({ state: 'visible', timeout: 1000 })
+        .catch(() => {});
     }
 
     try {
